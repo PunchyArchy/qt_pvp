@@ -1,3 +1,4 @@
+import datetime
 import threading
 import time
 from qt_pvp.cms_interface import functions
@@ -153,9 +154,11 @@ def download_interest_videos(jsession, interests):
         #    continue
         logger.debug(f"Working with interest - {interest}")
         start_time_seconds = functions.seconds_since_midnight(
-            interest["start_time_datetime"])
+            datetime.datetime.strptime(interest["start_time"],
+                                       "%Y-%m-%d %H:%M:%S"))
         end_time_seconds = functions.seconds_since_midnight(
-            interest["end_time_datetime"])
+            datetime.datetime.strptime(interest["endtime"],
+                                       "%Y-%m-%d %H:%M:%S"))
         time_splits = functions.split_time(
             start_time=start_time_seconds,
             end_time=end_time_seconds)

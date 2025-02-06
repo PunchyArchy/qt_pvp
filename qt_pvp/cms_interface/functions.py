@@ -61,8 +61,6 @@ def analyze_tracks_get_interests(tracks):
                     "start_time": start_time,
                     "end_time": end_time,
                     "device_id": track_analyze["device_id"],
-                    "start_time_datetime": start_time_datetime,
-                    "end_time_datetime": end_time_datetime
                 })
                 start_time = None
     logger.debug(f"Get interests: {interests}")
