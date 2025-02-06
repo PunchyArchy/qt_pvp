@@ -1,4 +1,4 @@
 qt_pvp/output
 qt_pvp/input
-qt_pvp/logs
+qt_pvp/logs/*
 misc/
