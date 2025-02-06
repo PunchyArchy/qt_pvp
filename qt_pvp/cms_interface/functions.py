@@ -55,9 +55,16 @@ def analyze_tracks_get_interests(tracks):
                 end_time, "%Y-%m-%d %H:%M:%S")
             if start_time_datetime < end_time_datetime:
                 interests.append({
-                    "name": f"{start_time_datetime.year}.{start_time_datetime.month}.{start_time_datetime.day} "
-                            f"{start_time_datetime.hour}-{start_time_datetime.minute}-{start_time_datetime.second} - "
-                            f"{end_time_datetime.hour}-{end_time_datetime.minute}-{end_time_datetime.second}",
+                    "name": f"{track_analyze['device_id']}_"
+                            f"{start_time_datetime.year}."
+                            f"{start_time_datetime.month}."
+                            f"{start_time_datetime.day} "
+                            f"{start_time_datetime.hour}-"
+                            f"{start_time_datetime.minute}-"
+                            f"{start_time_datetime.second}_"
+                            f"{end_time_datetime.hour}-"
+                            f"{end_time_datetime.minute}-"
+                            f"{end_time_datetime.second}",
                     "start_time": start_time,
                     "end_time": end_time,
                     "device_id": track_analyze["device_id"],
@@ -67,15 +74,15 @@ def analyze_tracks_get_interests(tracks):
     return interests
 
 
-def split_time(start_time, end_time):
+def split_time(start_time, end_time, split=30):
     # Проверка, чтобы начало было меньше конца
     if start_time >= end_time:
         return []
     intervals = []
     current_time = start_time
-    while current_time + 9 < end_time:
-        intervals.append((current_time, current_time + 9))
-        current_time += 10
+    while current_time + (split-1) < end_time:
+        intervals.append((current_time, current_time + (split-1)))
+        current_time += split
     # Добавляем последний неполный интервал, если он есть
     if current_time <= end_time:
         intervals.append((current_time, end_time))
