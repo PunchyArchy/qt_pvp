@@ -16,6 +16,7 @@ class Main:
         threading.Thread(target=main_funcs.video_remover_cycle).start()
 
     def video_ready_trigger(self, *args, **kwargs):
+        logger.info("Dummy trigger activated")
         pass
 
     def download_all(self):
@@ -85,6 +86,7 @@ class Main:
             logger.info(f"{reg_id}. New last upload data - {now}")
             main_funcs.clean_interests(reg_id)
             self.video_ready_trigger()
+            logger.info("Done")
 
 
         # devices = cms_api.get_o
