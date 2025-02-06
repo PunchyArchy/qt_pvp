@@ -78,7 +78,6 @@ def get_device_track_all_pages(jsession: str, device_id: str, start_time: str,
         tracks = get_device_track(jsession, device_id, start_time, stop_time,
                                   page=current_page)
         tracks_json = tracks.json()
-        print(tracks_json)
         total_pages = tracks_json["pagination"]["totalPages"]
         current_page = tracks_json["pagination"]["currentPage"]
         all_tracks += tracks_json["tracks"]
