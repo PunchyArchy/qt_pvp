@@ -84,6 +84,8 @@ class Main:
                 shutil.rmtree(interest_temp_folder)
             main_funcs.clean_interests(reg_id)
             self.video_ready_trigger()
+            logger.info(f"{reg_id}. Done.")
+
 
 
         # devices = cms_api.get_o
