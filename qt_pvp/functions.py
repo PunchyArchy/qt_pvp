@@ -126,9 +126,9 @@ def convert_video_file(input_video_path: str, output_dir: str = None,
         logger.debug("Output dir for converted files is not specified. "
                      "Input file`s dir has been choosen.")
         output_dir = os.path.dirname(input_video_path)
+    filename = os.path.basename(input_video_path)
     output_video_path = os.path.join(output_dir,
-                                     os.path.splitext(input_video_path)[
-                                         0] + '.' + output_format)
+                                     filename + '.' + output_format)
     # Команда для конвертации через FFMPEG
     conversion_command = ['ffmpeg', '-i', input_video_path, '-c:v',
                           'libx264', '-crf', '23', '-preset', 'medium',
