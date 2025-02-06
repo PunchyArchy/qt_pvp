@@ -11,9 +11,10 @@ import os
 
 
 class Main:
-    def __init__(self):
+    def __init__(self, output_format="mp4"):
         self.jsession = cms_api.login().json()["jsession"]
         threading.Thread(target=main_funcs.video_remover_cycle).start()
+        self.output_format = output_format
 
     def video_ready_trigger(self, *args, **kwargs):
         logger.info("Dummy trigger activated")
@@ -69,12 +70,13 @@ class Main:
                 converted_videos = []
                 for video_path in interest["file_paths"]:
                     converted_video = main_funcs.convert_video_file(
-                        video_path, output_dir=interest_temp_folder)
+                        video_path, output_dir=interest_temp_folder,
+                        output_format=self.output_format)
                     #os.remove(video_path)
                     converted_videos.append(converted_video)
                 output_video_path = os.path.join(
                     settings.INTERESTING_VIDEOS_FOLDER,
-                    interest_name)
+                    f"{interest_name}.{self.output_format}")
                 main_funcs.concatenate_videos(
                     settings.TEMP_FOLDER,
                     converted_files=converted_videos,
