@@ -157,7 +157,7 @@ def download_interest_videos(jsession, interests):
             datetime.datetime.strptime(interest["start_time"],
                                        "%Y-%m-%d %H:%M:%S"))
         end_time_seconds = functions.seconds_since_midnight(
-            datetime.datetime.strptime(interest["endtime"],
+            datetime.datetime.strptime(interest["end_time"],
                                        "%Y-%m-%d %H:%M:%S"))
         time_splits = functions.split_time(
             start_time=start_time_seconds,
