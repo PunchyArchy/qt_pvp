@@ -123,6 +123,8 @@ def concatenate_videos(temp_dir, converted_files, output_abs_name):
 def convert_video_file(input_video_path: str, output_dir: str = None,
                        output_format: str = "mp4"):
     if not output_dir:
+        logger.debug("Output dir for converted files is not specified. "
+                     "Input file`s dir has been choosen.")
         output_dir = os.path.dirname(input_video_path)
     output_video_path = os.path.join(output_dir,
                                      os.path.splitext(input_video_path)[
@@ -233,6 +235,14 @@ def get_regs_states(**kwargs):
 def get_interests(reg_id):
     reg_info = get_reg_info(reg_id)
     return reg_info["interests"]
+
+
+def save_new_interests(reg_id, interests):
+    states = get_json_states()
+    if not reg_id in states["regs"]:
+        create_new_reg(reg_id)
+    states["regs"][reg_id]["states"] = interests
+    save_new_states_to_file(states)
 
 
 def clean_interests(reg_id):

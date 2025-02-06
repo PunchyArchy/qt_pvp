@@ -43,6 +43,7 @@ class Main:
             interest_saved = main_funcs.get_interests(reg_id)
             if not interest_saved:
                 interests = cms_api_funcs.analyze_tracks_get_interests(tracks)
+                main_funcs.save_new_interests(reg_id, interests)
             else:
                 logger.info("Found saved interests in json")
                 interests = interest_saved
@@ -55,8 +56,6 @@ class Main:
                                                           interest)
                 interests_with_fp.append(data)
             logger.info(f"{reg_id}. Done")
-            main_funcs.save_new_reg_last_upload_time(reg_id, now)
-            logger.info(f"{reg_id}. New last upload data - {now}")
             #print(interests_with_fp)
             logger.info(f"{reg_id}. Converting&Concatenating videos...")
             for interest in interests_with_fp:
@@ -82,6 +81,8 @@ class Main:
                 logger.info(f"{reg_id} Success converted {interest_name} "
                             f"to {output_video_path}")
                 shutil.rmtree(interest_temp_folder)
+            main_funcs.save_new_reg_last_upload_time(reg_id, now)
+            logger.info(f"{reg_id}. New last upload data - {now}")
             main_funcs.clean_interests(reg_id)
             self.video_ready_trigger()
 
