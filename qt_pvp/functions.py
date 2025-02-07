@@ -109,7 +109,7 @@ def concatenate_videos(temp_dir, converted_files, output_abs_name):
         for file in converted_files:
             list_file.write(f"file '{file}'\n")
     # Команда для объединения через FFMPEG
-    concatenate_command = ['ffmpeg', '-f', 'concat', '-safe', '0', '-i',
+    concatenate_command = ['ffmpeg', '-y', '-f', 'concat', '-safe', '0', '-i',
                            concat_list_path, '-c', 'copy',
                            output_abs_name]
     logger.debug(
@@ -130,7 +130,7 @@ def convert_video_file(input_video_path: str, output_dir: str = None,
     output_video_path = os.path.join(output_dir,
                                      filename + '.' + output_format)
     # Команда для конвертации через FFMPEG
-    conversion_command = ['ffmpeg', '-i', input_video_path, '-c:v',
+    conversion_command = ['ffmpeg', '-y', '-i', input_video_path, '-c:v',
                           'libx264', '-crf', '23', '-preset', 'medium',
                           output_video_path]
     logger.debug(
