@@ -26,15 +26,15 @@ def login():
 
 @functions.cms_data_get_decorator()
 def get_video(jsession, device_id: str, start_time_seconds: int,
-              end_time_seconds: int):
+              end_time_seconds: int, year: str, month: str, day: str):
     return requests.get(
         f"{settings.cms_host}/StandardApiAction_getVideoFileInfo.action?",
         params={"DevIDNO": device_id,
                 "LOC": 1,
                 "CHN": 1,
-                "YEAR": "2025",
-                "MON": "1",
-                "DAY": "30",
+                "YEAR": year,
+                "MON": month,
+                "DAY": day,
                 "RECTYPE": -1,
                 "FILEATTR": 2,
                 "BEG": start_time_seconds,
@@ -84,7 +84,7 @@ def get_device_track_all_pages(jsession: str, device_id: str, start_time: str,
         all_tracks += tracks_json["tracks"]
         if current_page >= total_pages:
             break
-    #logger.debug(f"Got tracks: {all_tracks}")
+    # logger.debug(f"Got tracks: {all_tracks}")
     return all_tracks
 
 
@@ -153,12 +153,14 @@ def download_interest_videos(jsession, interests):
         # if interests.index(interest) == 0:
         #    continue
         logger.debug(f"Working with interest - {interest}")
+        start_time_datetime = datetime.datetime.strptime(
+            interest["start_time"], "%Y-%m-%d %H:%M:%S")
+        end_time_datetime = datetime.datetime.strptime(
+            interest["end_time"], "%Y-%m-%d %H:%M:%S")
         start_time_seconds = functions.seconds_since_midnight(
-            datetime.datetime.strptime(interest["start_time"],
-                                       "%Y-%m-%d %H:%M:%S"))
+            start_time_datetime)
         end_time_seconds = functions.seconds_since_midnight(
-            datetime.datetime.strptime(interest["end_time"],
-                                       "%Y-%m-%d %H:%M:%S"))
+            end_time_datetime)
         time_splits = functions.split_time(
             start_time=start_time_seconds,
             end_time=end_time_seconds)
@@ -169,10 +171,15 @@ def download_interest_videos(jsession, interests):
             result = 24
             while result == 24:
                 try:
-                    response = get_video(jsession=jsession,
-                                         device_id=interest["device_id"],
-                                         start_time_seconds=time_split[0],
-                                         end_time_seconds=time_split[1])
+                    response = get_video(
+                        jsession=jsession,
+                        device_id=interest["device_id"],
+                        start_time_seconds=time_split[0],
+                        end_time_seconds=time_split[1],
+                        year=str(start_time_datetime.year),
+                        month=str(start_time_datetime.month),
+                        day=str(start_time_datetime.day)
+                    )
                     response_json = response.json()
                     result = response_json["result"]
                     logger.debug(f"Result: {response_json}")
