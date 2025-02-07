@@ -58,7 +58,7 @@ class Main:
                                                           interest)
                 interests_with_fp.append(data)
             logger.info(f"{reg_id}. Done")
-            #print(interests_with_fp)
+            # print(interests_with_fp)
             logger.info(f"{reg_id}. Converting&Concatenating videos...")
             for interest in interests_with_fp:
                 interest_name = interest["name"]
@@ -69,10 +69,12 @@ class Main:
                     os.makedirs(interest_temp_folder)
                 converted_videos = []
                 for video_path in interest["file_paths"]:
+                    if not video_path:
+                        continue
                     converted_video = main_funcs.convert_video_file(
                         video_path, output_dir=interest_temp_folder,
                         output_format=self.output_format)
-                    #os.remove(video_path)
+                    # os.remove(video_path)
                     converted_videos.append(converted_video)
                 output_video_path = os.path.join(
                     settings.INTERESTING_VIDEOS_FOLDER,
@@ -89,7 +91,6 @@ class Main:
             main_funcs.clean_interests(reg_id)
             self.video_ready_trigger()
             logger.info("Done")
-
 
         # devices = cms_api.get_o
 
