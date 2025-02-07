@@ -80,8 +80,8 @@ def split_time(start_time, end_time, split=30):
         return []
     intervals = []
     current_time = start_time
-    while current_time + (split-1) < end_time:
-        intervals.append((current_time, current_time + (split-1)))
+    while current_time + split < end_time:
+        intervals.append((current_time, current_time + split))
         current_time += split
     # Добавляем последний неполный интервал, если он есть
     if current_time <= end_time:
