@@ -91,7 +91,7 @@ class Main:
                 converted_video = main_funcs.convert_video_file(
                     video_path, output_dir=interest_temp_folder,
                     output_format=self.output_format)
-                os.remove(video_path)
+                #os.remove(video_path)
                 converted_videos.append(converted_video)
             output_video_path = os.path.join(
                 settings.INTERESTING_VIDEOS_FOLDER,

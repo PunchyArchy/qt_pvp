@@ -41,7 +41,7 @@ def get_video(jsession, device_id: str, start_time_seconds: int,
                 "END": end_time_seconds,
                 "ARM1": 0,
                 "ARM2": 0,
-                "RES": 0,
+                "RES": 2,
                 "STREAM": 0,
                 "STORE": 0,
                 "jsession": jsession},
@@ -161,6 +161,8 @@ def download_interest_videos(jsession, interests):
             start_time_datetime)
         end_time_seconds = functions.seconds_since_midnight(
             end_time_datetime)
+        start_time_seconds -= 1
+        end_time_seconds -= 1
         time_splits = functions.split_time(
             start_time=start_time_seconds,
             end_time=end_time_seconds)
