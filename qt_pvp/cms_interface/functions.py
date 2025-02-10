@@ -28,7 +28,7 @@ def analyze_s1(s1_int: int):
     }
 
 
-def analyze_tracks_get_interests(tracks):
+def analyze_tracks_get_interests(tracks, by_trigger=True):
     # was_stop = None
     start_time = None
     interests = []
@@ -45,6 +45,29 @@ def analyze_tracks_get_interests(tracks):
         track_analyze["mileage"] = track["lc"]
         track_analyze["gps_upload_time"] = track["gt"]
         track_analyze["device_id"] = track["vid"]
+        if not by_trigger:
+            start_time = track_analyze["gps_upload_time"]
+            end_time = track_analyze["gps_upload_time"]
+            start_time_datetime = datetime.datetime.strptime(
+                start_time, "%Y-%m-%d %H:%M:%S")
+            end_time_datetime = datetime.datetime.strptime(
+                end_time, "%Y-%m-%d %H:%M:%S")
+            interests.append({
+                "name": f"{track_analyze['device_id']}_"
+                        f"{start_time_datetime.year}."
+                        f"{start_time_datetime.month}."
+                        f"{start_time_datetime.day} "
+                        f"{start_time_datetime.hour}-"
+                        f"{start_time_datetime.minute}-"
+                        f"{start_time_datetime.second}_"
+                        f"{end_time_datetime.hour}-"
+                        f"{end_time_datetime.minute}-"
+                        f"{end_time_datetime.second}",
+                "start_time": start_time,
+                "end_time": end_time,
+                "device_id": track_analyze["device_id"],
+            })
+            continue
         if track_analyze["io1"] and not start_time:
             start_time = track_analyze["gps_upload_time"]
         elif track_analyze["speed"] > 60 and start_time:

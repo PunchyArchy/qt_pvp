@@ -48,24 +48,34 @@ class Main:
         else:
             self.devices_in_progress.remove(reg_id)
 
-    def download_reg_videos(self, reg_id):
-        logger.debug(f"Working with device {reg_id}")
-        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        last_upload_time = main_funcs.get_reg_last_upload_time(reg_id)
-        logger.debug(f"{reg_id}. Last upload time: {last_upload_time}")
-        tracks = cms_api.get_device_track_all_pages(
-            jsession=self.jsession,
-            device_id=reg_id,
-            start_time=last_upload_time,
-            stop_time=now
-        )
+    def get_interests(self, reg_id, start_time, stop_time, by_trigger):
         interest_saved = main_funcs.get_interests(reg_id)
         if not interest_saved:
-            interests = cms_api_funcs.analyze_tracks_get_interests(tracks)
+            tracks = cms_api.get_device_track_all_pages(
+                jsession=self.jsession,
+                device_id=reg_id,
+                start_time=start_time,
+                stop_time=stop_time
+            )
+            interests = cms_api_funcs.analyze_tracks_get_interests(
+                tracks, by_trigger)
             main_funcs.save_new_interests(reg_id, interests)
         else:
             logger.info("Found saved interests in json")
             interests = interest_saved
+        return interests
+
+    def download_reg_videos(self, reg_id, start_time=None, end_time=None,
+                            by_trigger=False):
+        logger.debug(f"Working with device {reg_id}")
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if not start_time:
+            start_time = main_funcs.get_reg_last_upload_time(reg_id)
+        if not end_time:
+            end_time = now
+        logger.debug(f"{reg_id}. Start time: {start_time}")
+        interests = self.get_interests(reg_id, start_time, end_time,
+                                       by_trigger)
         interests_with_fp = []
         logger.info(f"{reg_id}. Generating and executing download tasks")
         cms_api.download_interest_videos(self.jsession, interests)
@@ -75,7 +85,6 @@ class Main:
                                                       interest)
             interests_with_fp.append(data)
         logger.info(f"{reg_id}. Done")
-        # print(interests_with_fp)
         logger.info(f"{reg_id}. Converting&Concatenating videos...")
         for interest in interests_with_fp:
             interest_name = interest["name"]
@@ -91,7 +100,7 @@ class Main:
                 converted_video = main_funcs.convert_video_file(
                     video_path, output_dir=interest_temp_folder,
                     output_format=self.output_format)
-                #os.remove(video_path)
+                # os.remove(video_path)
                 converted_videos.append(converted_video)
             output_video_path = os.path.join(
                 settings.INTERESTING_VIDEOS_FOLDER,
@@ -103,8 +112,8 @@ class Main:
             logger.info(f"{reg_id} Success converted {interest_name} "
                         f"to {output_video_path}")
             shutil.rmtree(interest_temp_folder)
-        main_funcs.save_new_reg_last_upload_time(reg_id, now)
-        logger.info(f"{reg_id}. New last upload data - {now}")
+        main_funcs.save_new_reg_last_upload_time(reg_id, end_time)
+        logger.info(f"{reg_id}. New last upload data - {end_time}")
         main_funcs.clean_interests(reg_id)
         self.video_ready_trigger()
         logger.info("Done")
