@@ -34,6 +34,9 @@ def analyze_tracks_get_interests(tracks, by_trigger=True):
     start_time_datetime = None
     interests = []
     # print(tracks)
+    if not by_trigger:
+        start_time_datetime = datetime.datetime.strptime(
+                tracks[0]["gt"], "%Y-%m-%d %H:%M:%S")
     for track in tracks:
         track_analyze = {}
         s1 = analyze_s1(track["s1"])

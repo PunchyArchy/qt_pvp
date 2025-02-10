@@ -130,4 +130,6 @@ class Main:
 
 if __name__ == "__main__":
     d = Main()
-    d.mainloop()
+    #d.mainloop()
+    d.download_reg_videos("104040", "2025-02-05 14:00:00",
+                          "2025-02-05 14:15:00", by_trigger=False)
