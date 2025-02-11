@@ -122,6 +122,8 @@ def get_interest_download_path(jsession, interest, remove_urls=True):
             file_paths.append(file_path)
         if remove_urls:
             interest.pop("download_tasks")
+    logger.debug(f"Found file paths {file_paths} "
+                 f"for interest {interest['name']}")
     interest["file_paths"] = file_paths
     return interest
 
