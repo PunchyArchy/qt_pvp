@@ -70,7 +70,7 @@ class Main:
         return interests
 
     def generate_fake_interests(self, reg_id, start_time, end_time,
-                                interval_sec=120):
+                                interval_sec=30):
         logger.debug(f"{reg_id}. Generating fake interests in time range "
                      f"from {start_time} to {end_time}")
         time_splits = main_funcs.split_time_range_to_dicts(
@@ -108,6 +108,9 @@ class Main:
         logger.debug(f"{reg_id}. Start time: {start_time}")
         interests = self.get_interests(reg_id, start_time, end_time,
                                        by_trigger)
+        if not interests:
+            logger.info("No interests found")
+            return
         interests_with_fp = []
         logger.info(f"{reg_id}. Generating and executing download tasks")
         cms_api.download_interest_videos(self.jsession, interests)
