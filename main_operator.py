@@ -136,12 +136,15 @@ class Main:
             output_video_path = os.path.join(
                 settings.INTERESTING_VIDEOS_FOLDER,
                 f"{interest_name}.{self.output_format}")
-            main_funcs.concatenate_videos(
-                converted_files=converted_videos,
-                output_abs_name=output_video_path)
-            logger.info(f"{reg_id} Success converted {interest_name} "
-                        f"to {output_video_path}")
-            shutil.rmtree(interest_temp_folder)
+            if converted_videos:
+                main_funcs.concatenate_videos(
+                    converted_files=converted_videos,
+                    output_abs_name=output_video_path)
+                logger.info(f"{reg_id} Success converted {interest_name} "
+                            f"to {output_video_path}")
+                shutil.rmtree(interest_temp_folder)
+            else:
+                logger.error("No converted video for concatenating found.")
         main_funcs.save_new_reg_last_upload_time(reg_id, end_time)
         logger.info(f"{reg_id}. New last upload data - {end_time}")
         main_funcs.clean_interests(reg_id)
