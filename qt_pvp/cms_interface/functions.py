@@ -53,7 +53,7 @@ def analyze_tracks_get_interests(tracks, by_trigger=True):
             end_time = track_analyze["gps_upload_time"]
             end_time_datetime = datetime.datetime.strptime(
                 end_time, "%Y-%m-%d %H:%M:%S")
-            if start_time_datetime and (end_time_datetime - start_time_datetime).min >= 2:
+            if start_time and start_time_datetime and (end_time_datetime - start_time_datetime).seconds >= 120:
                 interests.append({
                     "name": f"{track_analyze['device_id']}_"
                             f"{start_time_datetime.year}."
