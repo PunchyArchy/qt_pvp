@@ -104,7 +104,7 @@ def wait_and_get_dwn_url(jsession, download_task_url):
         response_json = response.json()
         result = response_json["result"]
         if result == 11:
-            logger.debug("Get path", str(response_json["oldTaskAll"]["dph"]))
+            logger.debug(f'Get path: {str(response_json["oldTaskAll"]["dph"])}')
             return response_json["oldTaskAll"]["dph"]
     # while result != 11:
     #    if not return_path:
