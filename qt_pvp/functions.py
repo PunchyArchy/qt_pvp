@@ -138,7 +138,11 @@ def convert_video_file(input_video_path: str, output_dir: str = None,
                           output_video_path]
     logger.debug(
         f"Команда на конвертацию {' '.join(conversion_command)}")
-    subprocess.run(conversion_command, check=True)
+    try:
+        subprocess.run(conversion_command, check=True)
+    except subprocess.CalledProcessError:
+        logger.critical("Ошибка конвертации!")
+        return None
     return output_video_path
 
 

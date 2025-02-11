@@ -138,7 +138,8 @@ class Main:
                     video_path, output_dir=interest_temp_folder,
                     output_format=self.output_format)
                 # os.remove(video_path)
-                converted_videos.append(converted_video)
+                if converted_video:
+                    converted_videos.append(converted_video)
             output_video_path = os.path.join(
                 settings.INTERESTING_VIDEOS_FOLDER,
                 f"{interest_name}.{self.output_format}")
