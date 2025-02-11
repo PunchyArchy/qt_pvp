@@ -99,7 +99,8 @@ class Main:
     def download_reg_videos(self, reg_id, start_time=None, end_time=None,
                             by_trigger=False):
         logger.debug(f"Working with device {reg_id}")
-        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        begin_time = datetime.datetime.now()
+        now = begin_time.strftime("%Y-%m-%d %H:%M:%S")
         if not start_time:
             start_time = main_funcs.get_reg_last_upload_time(reg_id)
         if not end_time:
@@ -115,7 +116,10 @@ class Main:
             data = cms_api.get_interest_download_path(self.jsession,
                                                       interest)
             interests_with_fp.append(data)
-        logger.info(f"{reg_id}. Done")
+        download_time = datetime.datetime.now()
+        download_seconds = (download_time - begin_time).seconds
+        logger.info(f"{reg_id}. Downloading done. "
+                    f"It take {download_seconds} seconds")
         logger.info(f"{reg_id}. Converting&Concatenating videos...")
         for interest in interests_with_fp:
             interest_name = interest["name"]
@@ -145,11 +149,16 @@ class Main:
                 shutil.rmtree(interest_temp_folder)
             else:
                 logger.error("No converted video for concatenating found.")
+        pvp_time_seconds = (download_time - datetime.datetime.now()).seconds
         main_funcs.save_new_reg_last_upload_time(reg_id, end_time)
         logger.info(f"{reg_id}. New last upload data - {end_time}")
         main_funcs.clean_interests(reg_id)
         self.video_ready_trigger()
-        logger.info("Done")
+        last = (begin_time - datetime.datetime.now()).seconds
+        logger.info(f"{reg_id}. All works are done. "
+                    f"Downloading take {download_seconds} seconds."
+                    f"PvP operations {pvp_time_seconds} seconds."
+                    f"it take {last} seconds in total.")
 
     def mainloop(self):
         logger.info("Mainloop has been launched with success.")
