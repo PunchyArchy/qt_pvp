@@ -72,7 +72,7 @@ class Main:
     def generate_fake_interests(self, reg_id, start_time, end_time,
                                 interval_sec=120):
         logger.debug(f"{reg_id}. Generating fake interests in time range "
-                     f"from {start_time} to end_time")
+                     f"from {start_time} to {end_time}")
         time_splits = main_funcs.split_time_range_to_dicts(
             start_time, end_time, datetime.timedelta(seconds=interval_sec))
         interests = []
@@ -162,5 +162,5 @@ class Main:
 if __name__ == "__main__":
     d = Main()
     # d.mainloop()
-    d.download_reg_videos("104040", "2025-02-05 14:00:00",
-                          "2025-02-05 14:15:00", by_trigger=False)
+    d.download_reg_videos("104040", "2025-02-05 15:00:00",
+                          "2025-02-05 16:00:00", by_trigger=False)
