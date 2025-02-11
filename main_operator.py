@@ -90,8 +90,8 @@ class Main:
                         f"{time_end.hour}-"
                         f"{time_end.minute}-"
                         f"{time_end.second}",
-                "start_time": start_time,
-                "end_time": end_time,
+                "start_time": time_start,
+                "end_time": time_end,
                 "device_id": reg_id, })
         logger.debug(f"{reg_id}. Got {len(interests)} fake interests.")
         return interests
