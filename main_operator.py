@@ -160,7 +160,7 @@ class Main:
         logger.info(f"{reg_id}. New last upload data - {end_time}")
         main_funcs.clean_interests(reg_id)
         self.video_ready_trigger()
-        last = (begin_time - datetime.datetime.now()).seconds
+        last = (datetime.datetime.now() - begin_time).seconds
         logger.info(f"{reg_id}. All works are done. "
                     f"Interests creating take {interest_create_seconds} seconds."
                     f"Downloading take {download_seconds} seconds."
@@ -180,5 +180,5 @@ class Main:
 if __name__ == "__main__":
     d = Main()
     # d.mainloop()
-    d.download_reg_videos("104040", "2025-02-05 15:00:00",
-                          "2025-02-05 16:00:00", by_trigger=False)
+    d.download_reg_videos("104040", "2025-02-11 15:06:00",
+                          "2025-02-11 15:09:00", by_trigger=False)
