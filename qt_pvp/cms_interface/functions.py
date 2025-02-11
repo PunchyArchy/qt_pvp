@@ -53,7 +53,10 @@ def analyze_tracks_get_interests(tracks, by_trigger=True):
             end_time = track_analyze["gps_upload_time"]
             end_time_datetime = datetime.datetime.strptime(
                 end_time, "%Y-%m-%d %H:%M:%S")
-            if start_time and start_time_datetime and (end_time_datetime - start_time_datetime).seconds >= 120:
+            if start_time_datetime and (end_time_datetime - start_time_datetime).seconds >= 120:
+                start_time = track_analyze["gps_upload_time"]
+                start_time_datetime = datetime.datetime.strptime(
+                    start_time, "%Y-%m-%d %H:%M:%S")
                 interests.append({
                     "name": f"{track_analyze['device_id']}_"
                             f"{start_time_datetime.year}."
@@ -69,9 +72,6 @@ def analyze_tracks_get_interests(tracks, by_trigger=True):
                     "end_time": end_time,
                     "device_id": track_analyze["device_id"],
                 })
-                start_time = track_analyze["gps_upload_time"]
-                start_time_datetime = datetime.datetime.strptime(
-                    start_time, "%Y-%m-%d %H:%M:%S")
             continue
         if track_analyze["io1"] and not start_time:
             start_time = track_analyze["gps_upload_time"]
