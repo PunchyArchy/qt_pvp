@@ -93,8 +93,8 @@ def convert_and_concatenate_videos(input_dir, output_format='mp4'):
         concatenated_filename = os.path.join(subdir_path,
                                              f'{subdir}.{output_format}')
         concatenated_filename = concatenate_videos(
-            subdir, converted_files,
-            concatenated_filename)
+            converted_files=converted_files,
+            output_abs_name=concatenated_filename)
         # Удаляем временные файлы
         # os.remove(concat_list_path)
         for file in converted_files:
@@ -102,9 +102,12 @@ def convert_and_concatenate_videos(input_dir, output_format='mp4'):
     # r#eturn {"output_path": concatenated_filename}
 
 
-def concatenate_videos(temp_dir, converted_files, output_abs_name):
-    concat_list_path = os.path.join(temp_dir, 'concat_list.txt')
+def concatenate_videos(сonverted_files, output_abs_name):
+    concat_list_path = os.path.join(os.path.dirname(output_abs_name),
+                                    'concat_list.txt')
     # Создаем временный файл со списком файлов для объединения
+    logger.debug(
+        f"Конкатенация файлов {сonverted_files}")
     with open(concat_list_path, 'w') as list_file:
         for file in converted_files:
             list_file.write(f"file '{file}'\n")

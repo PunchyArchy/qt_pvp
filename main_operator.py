@@ -137,7 +137,6 @@ class Main:
                 settings.INTERESTING_VIDEOS_FOLDER,
                 f"{interest_name}.{self.output_format}")
             main_funcs.concatenate_videos(
-                settings.TEMP_FOLDER,
                 converted_files=converted_videos,
                 output_abs_name=output_video_path)
             logger.info(f"{reg_id} Success converted {interest_name} "
