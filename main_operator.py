@@ -111,13 +111,15 @@ class Main:
         interests_with_fp = []
         logger.info(f"{reg_id}. Generating and executing download tasks")
         cms_api.download_interest_videos(self.jsession, interests)
+        interest_create_datetime = datetime.datetime.now()
+        interest_create_seconds = (interest_create_datetime - begin_time).seconds
         logger.info(f"{reg_id}. Getting downloaded videos...")
         for interest in interests:
             data = cms_api.get_interest_download_path(self.jsession,
                                                       interest)
             interests_with_fp.append(data)
         download_time = datetime.datetime.now()
-        download_seconds = (download_time - begin_time).seconds
+        download_seconds = (download_time - interest_create_datetime).seconds
         logger.info(f"{reg_id}. Downloading done. "
                     f"It take {download_seconds} seconds")
         logger.info(f"{reg_id}. Converting&Concatenating videos...")
@@ -156,6 +158,7 @@ class Main:
         self.video_ready_trigger()
         last = (begin_time - datetime.datetime.now()).seconds
         logger.info(f"{reg_id}. All works are done. "
+                    f"Interests creating take {interest_create_seconds} seconds."
                     f"Downloading take {download_seconds} seconds."
                     f"PvP operations {pvp_time_seconds} seconds."
                     f"it take {last} seconds in total.")
