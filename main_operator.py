@@ -152,7 +152,7 @@ class Main:
                 shutil.rmtree(interest_temp_folder)
             else:
                 logger.error("No converted video for concatenating found.")
-        pvp_time_seconds = (download_time - datetime.datetime.now()).seconds
+        pvp_time_seconds = (datetime.datetime.now() - download_time).seconds
         main_funcs.save_new_reg_last_upload_time(reg_id, end_time)
         logger.info(f"{reg_id}. New last upload data - {end_time}")
         main_funcs.clean_interests(reg_id)
