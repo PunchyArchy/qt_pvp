@@ -46,9 +46,9 @@ def unzip_archives_in_directory(input_dir, output_dir):
 def split_time_range_to_dicts(start_time_str, end_time_str, interval):
     # Преобразуем строки в объекты datetime
     start_time = datetime.datetime.strptime(start_time_str,
-                                            "%Y.%m.%d %H:%M:%S")
+                                            "%Y-%m-%d %H:%M:%S")
     end_time = datetime.datetime.strptime(end_time_str,
-                                          "%Y.%m.%d %H:%M:%S")
+                                          "%Y-%m-%d %H:%M:%S")
     # Проверяем, чтобы начало было раньше конца
     if start_time >= end_time:
         raise ValueError("Время начала должно быть раньше времени окончания.")
