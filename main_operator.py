@@ -57,12 +57,43 @@ class Main:
                 start_time=start_time,
                 stop_time=stop_time
             )
-            interests = cms_api_funcs.analyze_tracks_get_interests(
-                tracks, by_trigger)
-            main_funcs.save_new_interests(reg_id, interests)
+            if by_trigger:
+                interests = cms_api_funcs.analyze_tracks_get_interests(
+                    tracks, by_trigger)
+                main_funcs.save_new_interests(reg_id, interests)
+            else:
+                interests = self.generate_fake_interests(
+                    reg_id, start_time, stop_time, interval_sec=120)
         else:
             logger.info("Found saved interests in json")
             interests = interest_saved
+        return interests
+
+    def generate_fake_interests(self, reg_id, start_time, end_time,
+                                interval_sec=120):
+        logger.debug(f"{reg_id}. Generating fake interests in time range "
+                     f"from {start_time} to end_time")
+        time_splits = main_funcs.split_time_range_to_dicts(
+            start_time, end_time, datetime.timedelta(seconds=interval_sec))
+        interests = []
+        for slit in time_splits:
+            time_start = slit["time_start"]
+            time_end = slit["time_end"]
+            interests.append({
+                "name": f"{reg_id}_"
+                        f"{time_start.year}."
+                        f"{time_start.month}."
+                        f"{time_start.day} "
+                        f"{time_start.hour}-"
+                        f"{time_start.minute}-"
+                        f"{time_start.second}_"
+                        f"{time_end.hour}-"
+                        f"{time_end.minute}-"
+                        f"{time_end.second}",
+                "start_time": start_time,
+                "end_time": end_time,
+                "device_id": reg_id, })
+        logger.debug(f"{reg_id}. Got {len(interests)} fake interests.")
         return interests
 
     def download_reg_videos(self, reg_id, start_time=None, end_time=None,
@@ -130,6 +161,6 @@ class Main:
 
 if __name__ == "__main__":
     d = Main()
-    #d.mainloop()
+    # d.mainloop()
     d.download_reg_videos("104040", "2025-02-05 14:00:00",
                           "2025-02-05 14:15:00", by_trigger=False)
