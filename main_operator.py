@@ -26,7 +26,7 @@ class Main:
     def get_devices_online(self):
         devices_online = cms_api.get_online_devices(self.jsession)
         devices_online = devices_online.json()["onlines"]
-        logger.info(f"Got devices online: {devices_online}")
+        logger.debug(f"Got devices online: {devices_online}")
         return devices_online
 
     def download_all(self, devices_online: [] = None):
@@ -176,9 +176,41 @@ class Main:
                 self.operate_device(reg_id)
             time.sleep(5)
 
+    def trace_reg_state(self, reg_id):
+        online_was = False
+        bat_discharge_was = 0
+        while True:
+            device_status = self.get_devices_online()
+            if not device_status:
+                online_cur = 0
+            else:
+                online_cur = device_status[0]["online"]
+            if online_cur != online_was:
+                logger.info(f"Reg {reg_id} status has changed! "
+                            f"(Was {online_was} to {online_cur})")
+                online_was = online_cur
+            if online_cur:
+                status = cms_api.get_device_status(self.jsession, reg_id)
+                status_json = status.json()
+                if not status_json["result"] == 0:
+                    logger.error(f"Get device status error: {status_json}")
+                status = status_json["status"][0]
+                s1_status = cms_api_funcs.analyze_s1(status["s1"])
+                bat_discharge_status = s1_status["io1"]
+                if bat_discharge_status != bat_discharge_was:
+                    logger.info(
+                        f"Bat discharge status changed! "
+                        f"({bat_discharge_was} to {bat_discharge_status})")
+            time.sleep(3)
+
+
+
+
 
 if __name__ == "__main__":
     d = Main()
     # d.mainloop()
-    d.download_reg_videos("104040", "2025-02-11 15:06:00",
-                          "2025-02-11 15:09:00", by_trigger=False)
+    #d.download_reg_videos("104040", "2025-02-11 15:06:00",
+    #                      "2025-02-11 15:09:00", by_trigger=False)
+    b = d.trace_reg_state("104039")
+    print(b)

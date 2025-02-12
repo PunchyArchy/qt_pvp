@@ -8,11 +8,12 @@ import requests
 
 
 @functions.cms_data_get_decorator()
-def get_online_devices(jsession):
+def get_online_devices(jsession, device_id=None):
     return requests.get(
         f"{settings.cms_host}/StandardApiAction_getDeviceOlStatus.action?",
         params={"jsession": jsession,
-                "status": 1})
+                "status": 1,
+                "devIdno": device_id})
 
 
 @functions.cms_data_get_decorator()
@@ -69,6 +70,13 @@ def get_device_track(jsession: str, device_id: str, start_time: str,
                 })
     return response
 
+def get_device_status(jsession: str, device_id: str):
+    response = requests.get(
+        f"{settings.cms_host}/StandardApiAction_getDeviceStatus.action?",
+        params={"jsession": jsession,
+                "devIdno": device_id,
+                })
+    return response
 
 def get_device_track_all_pages(jsession: str, device_id: str, start_time: str,
                                stop_time: str):
@@ -129,7 +137,7 @@ def get_interest_download_path(jsession, interest, remove_urls=True):
     return interest
 
 
-# log_data = login()
+log_data = login()
 # print(log_data)
 # res = get_video(log_data["jsession"]).json()
 # if res["result"] == 32:

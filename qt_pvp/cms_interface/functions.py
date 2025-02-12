@@ -22,7 +22,7 @@ def analyze_s1(s1_int: int):
         # "parked_acc_state": bits_list[19],
         "io1": bits_list[20],
         "io2": bits_list[21],
-        # "io3": bits_list[22],
+        "io3": bits_list[22],
         # "io4": bits_list[23],
         # "io5": bits_list[24],
     }
