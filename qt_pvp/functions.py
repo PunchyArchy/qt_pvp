@@ -241,6 +241,8 @@ def get_regs_states(**kwargs):
 
 def get_interests(reg_id):
     reg_info = get_reg_info(reg_id)
+    if not reg_info:
+        return 
     return reg_info["interests"]
 
 

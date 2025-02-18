@@ -118,8 +118,8 @@ class Main:
         interest_create_seconds = (interest_create_datetime - begin_time).seconds
         logger.info(f"{reg_id}. Getting downloaded videos...")
         for interest in interests:
-            data = cms_api.get_interest_download_path(self.jsession,
-                                                      interest)
+            data = cms_api.get_interest_download_path(
+                self.jsession, interest)
             interests_with_fp.append(data)
         download_time = datetime.datetime.now()
         download_seconds = (download_time - interest_create_datetime).seconds
