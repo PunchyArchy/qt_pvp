@@ -74,9 +74,9 @@ class Main:
         logger.debug(f"{reg_id}. Generating fake interests in time range "
                      f"from {start_time} to {end_time}")
         start_time_dt = datetime.datetime.strptime(start_time,
-                                                "%Y-%m-%d %H:%M:%S")
+                                                   "%Y-%m-%d %H:%M:%S")
         end_time_dt = datetime.datetime.strptime(end_time,
-                                              "%Y-%m-%d %H:%M:%S")
+                                                 "%Y-%m-%d %H:%M:%S")
         if interval_sec:
             time_splits = main_funcs.split_time_range_to_dicts(
                 start_time_dt, end_time_dt,
@@ -131,14 +131,14 @@ class Main:
         logger.info(f"{reg_id}. Generating and executing download tasks")
         cms_api.download_interest_videos(
             self.jsession, interests, chanel_id, split)
-        #url = cms_api_funcs.form_add_download_task_url(reg_id=reg_id,
+        # url = cms_api_funcs.form_add_download_task_url(reg_id=reg_id,
         #                                               start_timestamp=start_time,
         #                                               end_timestamp=end_time,
         #                                               channel_id=1)
-        #print(url)
+        # print(url)
         interest_create_datetime = datetime.datetime.now()
         interest_create_seconds = (
-                    interest_create_datetime - begin_time).seconds
+                interest_create_datetime - begin_time).seconds
         logger.info(f"{reg_id}. Getting downloaded videos...")
         for interest in interests:
             data = cms_api.get_interest_download_path(
@@ -251,9 +251,13 @@ class Main:
 if __name__ == "__main__":
     d = Main()
     # d.mainloop()
-    d.download_reg_videos("2024050601", "2025-02-19 18:32:00",
-                          "2025-02-19 18:34:00", by_trigger=False,
-                          split=120, chanel_id=0)
+    d.download_reg_videos(
+        "2024050601",
+        chanel_id=0,
+        start_time="2025-02-19 18:32:00",
+        end_time="2025-02-19 18:34:00",
+        by_trigger=False,
+        split=120)
     # b = d.trace_reg_state("104039")
     # 118270348452
     # 2024050601
