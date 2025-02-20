@@ -268,14 +268,14 @@ class Main:
 
 if __name__ == "__main__":
     d = Main()
-    # d.mainloop()
-    d.download_reg_videos(
-        "2024050601",
-        chanel_id=0,
-        start_time="2025-02-20 11:10:00",
-        end_time="2025-02-20 11:16:00",
-        by_trigger=False,
-        split=120)
+    d.mainloop()
+    #d.download_reg_videos(
+    #    "2024050601",
+    #    chanel_id=0,
+    #    start_time="2025-02-20 11:10:00",
+    #    end_time="2025-02-20 11:16:00",
+    #    by_trigger=False,
+    #    split=120)
     # b = d.trace_reg_state("104039")
     # 118270348452
     # 2024050601
