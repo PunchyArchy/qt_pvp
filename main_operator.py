@@ -106,7 +106,7 @@ class Main:
         return interests
 
     def download_reg_videos(self, reg_id, start_time=None, end_time=None,
-                            by_trigger=False, proc=False):
+                            by_trigger=False, proc=False, split=False):
         logger.debug(f"Working with device {reg_id}")
         begin_time = datetime.datetime.now()
         now = begin_time.strftime("%Y-%m-%d %H:%M:%S")
@@ -250,7 +250,8 @@ if __name__ == "__main__":
     d = Main()
     # d.mainloop()
     d.download_reg_videos("2024050601", "2025-02-19 18:32:00",
-                          "2025-02-19 18:34:00", by_trigger=False)
+                          "2025-02-19 18:34:00", by_trigger=False,
+                          split=120)
     # b = d.trace_reg_state("104039")
     # 118270348452
     # 2024050601

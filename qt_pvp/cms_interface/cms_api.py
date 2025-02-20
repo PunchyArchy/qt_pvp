@@ -181,11 +181,11 @@ def download_interest_videos(jsession, interests, split=False):
             start_time_datetime)
         end_time_seconds = functions.seconds_since_midnight(
             end_time_datetime)
-
         if split:
             time_splits = functions.split_time(
                 start_time=start_time_seconds,
-                end_time=end_time_seconds)
+                end_time=end_time_seconds,
+                split=split)
         else:
             time_splits = [(start_time_seconds, end_time_seconds)]
         logger.debug(f"Got time splits: {time_splits}. Split - {split}")
