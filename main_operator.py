@@ -180,7 +180,7 @@ class Main:
                         converted_video = main_funcs.convert_video_file(
                             video_path, output_dir=interest_temp_folder,
                             output_format=self.output_format)
-                        # os.remove(video_path)
+                        os.remove(video_path)
                         if converted_video:
                             converted_videos.append(converted_video)
             elif len(interest["file_paths"]) == 1:
@@ -189,6 +189,8 @@ class Main:
                     f"{reg_id}. Moving interest video to {output_video_path}")
                 source = os.path.normpath(interest["file_paths"][0])
                 shutil.copy(source, output_video_path)
+                os.remove(source)
+                logger.debug(f"f{reg_id}. Deleted {source}.")
             if converted_videos or len(interest["file_paths"]) > 1:
                 if proc and converted_videos:
                     logger.info("Concatenating converted videos")
@@ -203,8 +205,9 @@ class Main:
                 logger.info(f"{reg_id} Success concatenated {interest_name} "
                             f"to {output_video_path}")
                 shutil.rmtree(interest_temp_folder)
-                #for file_path in vids_for_concat:
-                #   os.remove(file_path)
+                for file_path in vids_for_concat:
+                   os.remove(file_path)
+                   logger.debug(f"f{reg_id}. Deleted {file_path}.")
             else:
                 logger.debug("No converted videos for concatenating found.")
         pvp_time_seconds = (datetime.datetime.now() - download_time).seconds

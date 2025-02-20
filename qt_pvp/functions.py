@@ -251,7 +251,7 @@ def save_new_interests(reg_id, interests):
 
 
 def clean_interests(reg_id):
-    logger.info("Cleaning interests in states.json")
+    logger.debug("Cleaning interests in states.json")
     states = get_json_states()
     states["regs"][reg_id]["interests"] = []
     save_new_states_to_file(states)
