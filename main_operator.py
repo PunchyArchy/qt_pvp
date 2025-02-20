@@ -105,7 +105,7 @@ class Main:
         logger.debug(f"{reg_id}. Got {len(interests)} fake interests.")
         return interests
 
-    def download_reg_videos(self, reg_id, chanel_id: int,
+    def download_reg_videos(self, reg_id, chanel_id: int = None,
                             start_time=None, end_time=None,
                             by_trigger=False, proc=False, split: int = None):
         logger.debug(f"Working with device {reg_id}")
@@ -117,6 +117,11 @@ class Main:
         reg_info = main_funcs.get_reg_info(reg_id=reg_id)
         if not reg_info:
             reg_info = main_funcs.create_new_reg(reg_id)
+        if not chanel_id and "chanel_id" in reg_info.keys():
+            logger.info(f"{reg_id}. Got chanel id {chanel_id} from json")
+            chanel_id = reg_info["chanel_id"]
+        elif not chanel_id and "chanel_id" not in reg_info.keys():
+            chanel_id = 0
         if not start_time:
             start_time = main_funcs.get_reg_last_upload_time(reg_id)
         if not end_time:
@@ -262,8 +267,8 @@ if __name__ == "__main__":
     d.download_reg_videos(
         "2024050601",
         chanel_id=0,
-        start_time="2025-02-19 18:32:00",
-        end_time="2025-02-19 18:34:00",
+        start_time="2025-02-20 11:10:00",
+        end_time="2025-02-20 11:16:00",
         by_trigger=False,
         split=120)
     # b = d.trace_reg_state("104039")

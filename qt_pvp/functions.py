@@ -271,6 +271,7 @@ def create_new_reg(reg_id):
     last_upload = datetime.datetime.today() - datetime.timedelta(days=7)
     info["regs"][reg_id] = {
         "interests": [],
+        "chanel_id": 0,
         "last_upload_time": last_upload.strftime("%Y-%m-%d %H:%M:%S")}
     save_new_states_to_file(info)
 
