@@ -150,10 +150,10 @@ class Main:
                     f"It take {download_seconds} seconds")
         for interest in interests_with_fp:
             interest_name = interest["name"]
+            logger.info(f"{reg_id}.  Working with interest {interest_name}")
             output_video_path = os.path.join(
                 settings.INTERESTING_VIDEOS_FOLDER,
                 f"{interest_name}.{self.output_format}")
-            logger.info(f"{reg_id}. C&C interest {interest_name}")
             interest_temp_folder = os.path.join(
                 settings.TEMP_FOLDER, interest_name)
             if not os.path.exists(interest_temp_folder):
@@ -176,7 +176,7 @@ class Main:
                     # os.remove(video_path)
                     if converted_video:
                         converted_videos.append(converted_video)
-            else:
+            elif len(interest["file_paths"]) == 1:
                 # Видео только одно
                 logger.info(
                     f"{reg_id}. Moving interest video to {output_video_path}")
