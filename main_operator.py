@@ -35,7 +35,7 @@ class Main:
             devices_online = self.get_devices_online()
         for device_dict in devices_online:
             reg_id = device_dict["vid"]
-            self.download_reg_videos(reg_id)
+            self.download_reg_videos(reg_id, by_trigger=True)
 
     def operate_device(self, reg_id):
         if reg_id in self.devices_in_progress:
