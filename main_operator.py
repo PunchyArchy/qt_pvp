@@ -121,6 +121,8 @@ class Main:
             logger.info(f"{reg_id}. Got chanel id {chanel_id} from json")
             chanel_id = reg_info["chanel_id"]
         elif not chanel_id and "chanel_id" not in reg_info.keys():
+            logger.info(f"{reg_id}. Chanel id is not specified! "
+                        f"Chosen default id (0)")
             chanel_id = 0
         if not start_time:
             start_time = main_funcs.get_reg_last_upload_time(reg_id)
