@@ -28,10 +28,10 @@ def login():
 @functions.cms_data_get_decorator()
 def get_video(jsession, device_id: str, start_time_seconds: int,
               end_time_seconds: int, year: int, month: int, day: str,
-              chanel: int = 0):
+              chanel_id: int = 0):
     params = {"DevIDNO": device_id,
                 "LOC": 1,
-                "CHN": chanel,
+                "CHN": chanel_id,
                 "YEAR": int(year),
                 "MON": int(month),
                 "DAY": int(day),
