@@ -106,7 +106,7 @@ class Main:
         return interests
 
     def download_reg_videos(self, reg_id, start_time=None, end_time=None,
-                            by_trigger=False, proc=False, split=False):
+                            by_trigger=False, proc=False, split: int = None):
         logger.debug(f"Working with device {reg_id}")
         begin_time = datetime.datetime.now()
         now = begin_time.strftime("%Y-%m-%d %H:%M:%S")
@@ -128,7 +128,7 @@ class Main:
             return
         interests_with_fp = []
         logger.info(f"{reg_id}. Generating and executing download tasks")
-        cms_api.download_interest_videos(self.jsession, interests)
+        cms_api.download_interest_videos(self.jsession, interests, split)
         #url = cms_api_funcs.form_add_download_task_url(reg_id=reg_id,
         #                                               start_timestamp=start_time,
         #                                               end_timestamp=end_time,
