@@ -118,8 +118,8 @@ class Main:
         if not reg_info:
             reg_info = main_funcs.create_new_reg(reg_id)
         if not chanel_id and "chanel_id" in reg_info.keys():
-            logger.info(f"{reg_id}. Got chanel id {chanel_id} from json")
             chanel_id = reg_info["chanel_id"]
+            logger.info(f"{reg_id}. Got chanel id {chanel_id} from json")
         elif not chanel_id and "chanel_id" not in reg_info.keys():
             logger.info(f"{reg_id}. Chanel id is not specified! "
                         f"Chosen default id (0)")
