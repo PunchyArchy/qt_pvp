@@ -42,7 +42,7 @@ class Main:
             return
         self.devices_in_progress.append(reg_id)
         try:
-            self.download_reg_videos(reg_id)
+            self.download_reg_videos(reg_id, by_trigger=True)
         except:
             logger.error(traceback.format_exc())
         else:
