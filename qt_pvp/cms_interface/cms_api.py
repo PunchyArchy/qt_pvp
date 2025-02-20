@@ -168,7 +168,7 @@ log_data = login()
 # interests = functions.analyze_tracks_get_interests(tracks)
 
 
-def download_interest_videos(jsession, interests, split=False):
+def download_interest_videos(jsession, interests, chanel_id, split=False):
     for interest in interests:
         # if interests.index(interest) == 0:
         #    continue
@@ -195,6 +195,7 @@ def download_interest_videos(jsession, interests, split=False):
             response = get_video(
                 jsession=jsession,
                 device_id=interest["device_id"],
+                chanel_id=chanel_id,
                 start_time_seconds=time_split[0],
                 end_time_seconds=time_split[1],
                 year=str(start_time_datetime.year),

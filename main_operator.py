@@ -55,7 +55,7 @@ class Main:
                 jsession=self.jsession,
                 device_id=reg_id,
                 start_time=start_time,
-                stop_time=stop_time
+                stop_time=stop_time,
             )
             if by_trigger:
                 interests = cms_api_funcs.analyze_tracks_get_interests(
@@ -105,7 +105,8 @@ class Main:
         logger.debug(f"{reg_id}. Got {len(interests)} fake interests.")
         return interests
 
-    def download_reg_videos(self, reg_id, start_time=None, end_time=None,
+    def download_reg_videos(self, reg_id, chanel_id: int,
+                            start_time=None, end_time=None,
                             by_trigger=False, proc=False, split: int = None):
         logger.debug(f"Working with device {reg_id}")
         begin_time = datetime.datetime.now()
@@ -128,7 +129,8 @@ class Main:
             return
         interests_with_fp = []
         logger.info(f"{reg_id}. Generating and executing download tasks")
-        cms_api.download_interest_videos(self.jsession, interests, split)
+        cms_api.download_interest_videos(
+            self.jsession, interests, chanel_id, split)
         #url = cms_api_funcs.form_add_download_task_url(reg_id=reg_id,
         #                                               start_timestamp=start_time,
         #                                               end_timestamp=end_time,
@@ -251,7 +253,7 @@ if __name__ == "__main__":
     # d.mainloop()
     d.download_reg_videos("2024050601", "2025-02-19 18:32:00",
                           "2025-02-19 18:34:00", by_trigger=False,
-                          split=120)
+                          split=120, chanel_id=0)
     # b = d.trace_reg_state("104039")
     # 118270348452
     # 2024050601
