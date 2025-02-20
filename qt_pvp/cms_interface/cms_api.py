@@ -112,6 +112,7 @@ def execute_download_task(jsession, download_task_url: str, return_path=False):
 
 
 def wait_and_get_dwn_url(jsession, download_task_url):
+    logger.debug(f"Downloading...")
     while True:
         response = execute_download_task(jsession=jsession,
                                          download_task_url=download_task_url)
@@ -123,7 +124,6 @@ def wait_and_get_dwn_url(jsession, download_task_url):
                 f'Get path: {str(response_json["oldTaskAll"]["dph"])}')
             return response_json["oldTaskAll"]["dph"]
         else:
-            logger.debug(f"{response_json['oldTaskAll']['id']}. Downloading...")
             time.sleep(2)
     # while result != 11:
     #    if not return_path:
