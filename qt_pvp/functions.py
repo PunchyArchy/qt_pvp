@@ -43,12 +43,8 @@ def unzip_archives_in_directory(input_dir, output_dir):
     logger.info(f'Распаковка {input_dir} в {output_dir} завершена.')
 
 
-def split_time_range_to_dicts(start_time_str, end_time_str, interval):
+def split_time_range_to_dicts(start_time, end_time, interval):
     # Преобразуем строки в объекты datetime
-    start_time = datetime.datetime.strptime(start_time_str,
-                                            "%Y-%m-%d %H:%M:%S")
-    end_time = datetime.datetime.strptime(end_time_str,
-                                          "%Y-%m-%d %H:%M:%S")
     # Проверяем, чтобы начало было раньше конца
     if start_time >= end_time:
         raise ValueError("Время начала должно быть раньше времени окончания.")
@@ -242,7 +238,7 @@ def get_regs_states(**kwargs):
 def get_interests(reg_id):
     reg_info = get_reg_info(reg_id)
     if not reg_info:
-        return 
+        return
     return reg_info["interests"]
 
 
@@ -294,6 +290,7 @@ def save_new_reg_last_upload_time(reg_id, timestamp):
         create_new_reg(reg_id)
     states["regs"][reg_id]["last_upload_time"] = timestamp
     save_new_states_to_file(states)
+
 
 
 def video_remover_cycle():

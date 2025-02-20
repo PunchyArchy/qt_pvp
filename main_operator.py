@@ -63,7 +63,7 @@ class Main:
                 main_funcs.save_new_interests(reg_id, interests)
             else:
                 interests = self.generate_fake_interests(
-                    reg_id, start_time, stop_time, interval_sec=120)
+                    reg_id, start_time, stop_time, interval_sec=0)
         else:
             logger.info("Found saved interests in json")
             interests = interest_saved
@@ -73,12 +73,21 @@ class Main:
                                 interval_sec=30):
         logger.debug(f"{reg_id}. Generating fake interests in time range "
                      f"from {start_time} to {end_time}")
-        time_splits = main_funcs.split_time_range_to_dicts(
-            start_time, end_time, datetime.timedelta(seconds=interval_sec))
+        start_time_dt = datetime.datetime.strptime(start_time,
+                                                "%Y-%m-%d %H:%M:%S")
+        end_time_dt = datetime.datetime.strptime(end_time,
+                                              "%Y-%m-%d %H:%M:%S")
+        if interval_sec:
+            time_splits = main_funcs.split_time_range_to_dicts(
+                start_time_dt, end_time_dt,
+                datetime.timedelta(seconds=interval_sec))
+        else:
+            time_splits = [{"time_start": start_time_dt,
+                            "time_end": end_time_dt}]
         interests = []
-        for slit in time_splits:
-            time_start = slit["time_start"]
-            time_end = slit["time_end"]
+        for split in time_splits:
+            time_start = split["time_start"]
+            time_end = split["time_end"]
             interests.append({
                 "name": f"{reg_id}_"
                         f"{time_start.year}."
@@ -97,10 +106,16 @@ class Main:
         return interests
 
     def download_reg_videos(self, reg_id, start_time=None, end_time=None,
-                            by_trigger=False):
+                            by_trigger=False, proc=False):
         logger.debug(f"Working with device {reg_id}")
         begin_time = datetime.datetime.now()
         now = begin_time.strftime("%Y-%m-%d %H:%M:%S")
+        if not self.check_if_reg_online(reg_id):
+            logger.info(f"{reg_id}. MDVR is offline")
+            return
+        reg_info = main_funcs.get_reg_info(reg_id=reg_id)
+        if not reg_info:
+            reg_info = main_funcs.create_new_reg(reg_id)
         if not start_time:
             start_time = main_funcs.get_reg_last_upload_time(reg_id)
         if not end_time:
@@ -114,8 +129,14 @@ class Main:
         interests_with_fp = []
         logger.info(f"{reg_id}. Generating and executing download tasks")
         cms_api.download_interest_videos(self.jsession, interests)
+        #url = cms_api_funcs.form_add_download_task_url(reg_id=reg_id,
+        #                                               start_timestamp=start_time,
+        #                                               end_timestamp=end_time,
+        #                                               channel_id=1)
+        #print(url)
         interest_create_datetime = datetime.datetime.now()
-        interest_create_seconds = (interest_create_datetime - begin_time).seconds
+        interest_create_seconds = (
+                    interest_create_datetime - begin_time).seconds
         logger.info(f"{reg_id}. Getting downloaded videos...")
         for interest in interests:
             data = cms_api.get_interest_download_path(
@@ -125,47 +146,62 @@ class Main:
         download_seconds = (download_time - interest_create_datetime).seconds
         logger.info(f"{reg_id}. Downloading done. "
                     f"It take {download_seconds} seconds")
-        logger.info(f"{reg_id}. Converting&Concatenating videos...")
         for interest in interests_with_fp:
             interest_name = interest["name"]
-            logger.info(f"{reg_id} C&C interest {interest_name}")
+            output_video_path = os.path.join(
+                settings.INTERESTING_VIDEOS_FOLDER,
+                f"{interest_name}.{self.output_format}")
+            logger.info(f"{reg_id}. C&C interest {interest_name}")
             interest_temp_folder = os.path.join(
                 settings.TEMP_FOLDER, interest_name)
             if not os.path.exists(interest_temp_folder):
                 os.makedirs(interest_temp_folder)
             converted_videos = []
-            for video_path in interest["file_paths"]:
-                if not video_path:
-                    continue
-                converted_video = main_funcs.convert_video_file(
-                    video_path, output_dir=interest_temp_folder,
-                    output_format=self.output_format)
-                # os.remove(video_path)
-                if converted_video:
-                    converted_videos.append(converted_video)
-            output_video_path = os.path.join(
-                settings.INTERESTING_VIDEOS_FOLDER,
-                f"{interest_name}.{self.output_format}")
+            if None in interest["file_paths"]:
+                interest["file_paths"].remove(None)
+            if not interest["file_paths"]:
+                logger.error(
+                    f"{reg_id}. Not found filepaths for interest "
+                    f"{interest_name}")
+                continue
+            if len(interest["file_paths"]) > 1 and proc:
+                logger.info(f"{reg_id}. Converting videos...")
+                for video_path in interest["file_paths"]:
+                    logger.info(f"Converting {video_path}")
+                    converted_video = main_funcs.convert_video_file(
+                        video_path, output_dir=interest_temp_folder,
+                        output_format=self.output_format)
+                    # os.remove(video_path)
+                    if converted_video:
+                        converted_videos.append(converted_video)
+            else:
+                # Видео только одно
+                logger.info(
+                    f"{reg_id}. Moving interest video to {output_video_path}")
+                source = os.path.normpath(interest["file_paths"][0])
+                shutil.copy(source, output_video_path)
             if converted_videos:
+                logger.info("Concatenating videos...")
                 main_funcs.concatenate_videos(
                     converted_files=converted_videos,
                     output_abs_name=output_video_path)
-                logger.info(f"{reg_id} Success converted {interest_name} "
+                logger.info(f"{reg_id} Success concatenated {interest_name} "
                             f"to {output_video_path}")
                 shutil.rmtree(interest_temp_folder)
             else:
-                logger.error("No converted video for concatenating found.")
+                logger.debug("No converted videos for concatenating found.")
         pvp_time_seconds = (datetime.datetime.now() - download_time).seconds
         main_funcs.save_new_reg_last_upload_time(reg_id, end_time)
         logger.info(f"{reg_id}. New last upload data - {end_time}")
         main_funcs.clean_interests(reg_id)
         self.video_ready_trigger()
         last = (datetime.datetime.now() - begin_time).seconds
-        logger.info(f"{reg_id}. All works are done. "
-                    f"Interests creating take {interest_create_seconds} seconds."
-                    f"Downloading take {download_seconds} seconds."
-                    f"PvP operations {pvp_time_seconds} seconds."
-                    f"it take {last} seconds in total.")
+        logger.info(
+            f"{reg_id}. All works are done. "
+            f"Interests creating take {interest_create_seconds} seconds."
+            f"Downloading take {download_seconds} seconds."
+            f"PvP operations {pvp_time_seconds} seconds."
+            f"it take {last} seconds in total.")
 
     def mainloop(self):
         logger.info("Mainloop has been launched with success.")
@@ -175,6 +211,12 @@ class Main:
                 reg_id = device_dict["vid"]
                 self.operate_device(reg_id)
             time.sleep(5)
+
+    def check_if_reg_online(self, reg_id):
+        devices_online = self.get_devices_online()
+        for device_dict in devices_online:
+            if reg_id == device_dict["vid"]:
+                return True
 
     def trace_reg_state(self, reg_id):
         online_was = False
@@ -204,13 +246,11 @@ class Main:
             time.sleep(3)
 
 
-
-
-
 if __name__ == "__main__":
     d = Main()
     # d.mainloop()
-    #d.download_reg_videos("104040", "2025-02-11 15:06:00",
-    #                      "2025-02-11 15:09:00", by_trigger=False)
-    b = d.trace_reg_state("104039")
-    print(b)
+    d.download_reg_videos("2024050601", "2025-02-19 18:32:00",
+                          "2025-02-19 18:34:00", by_trigger=False)
+    # b = d.trace_reg_state("104039")
+    # 118270348452
+    # 2024050601

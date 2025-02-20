@@ -24,6 +24,7 @@ get_video_rout = f"{eumid_host}/video"
 get_devices_rout = f"{eumid_host}/devices"
 get_devices_online = f"{eumid_host}/analyze/online"
 get_alarm_analyze = f"{eumid_host}/analyze/by_alarm"
+add_download_task = f"{eumid_host}/StandardVideoTrackAction_addDownloadTask.action"
 
 cms_host = f"{config.get('CMS', 'schema')}{config.get('CMS', 'ip')}:" \
            f"{config.getint('CMS', 'port')}"

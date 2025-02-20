@@ -27,26 +27,32 @@ def login():
 
 @functions.cms_data_get_decorator()
 def get_video(jsession, device_id: str, start_time_seconds: int,
-              end_time_seconds: int, year: str, month: str, day: str):
-    return requests.get(
-        f"{settings.cms_host}/StandardApiAction_getVideoFileInfo.action?",
-        params={"DevIDNO": device_id,
+              end_time_seconds: int, year: int, month: int, day: str,
+              chanel: int = 0):
+    params = {"DevIDNO": device_id,
                 "LOC": 1,
-                "CHN": 1,
-                "YEAR": year,
-                "MON": month,
-                "DAY": day,
+                "CHN": chanel,
+                "YEAR": int(year),
+                "MON": int(month),
+                "DAY": int(day),
                 "RECTYPE": -1,
                 "FILEATTR": 2,
                 "BEG": start_time_seconds,
                 "END": end_time_seconds,
                 "ARM1": 0,
                 "ARM2": 0,
-                "RES": 2,
-                "STREAM": 0,
+                "RES": 0, # RES 0
+                "STREAM": -1, #STREAM -1
                 "STORE": 0,
-                "jsession": jsession},
-        timeout=2)
+                "jsession": jsession,
+                "DownType": 2}
+    url = f"{settings.cms_host}/StandardApiAction_getVideoFileInfo.action?"
+    logger.debug(f"Getting request {url}. \nParams: {params}")
+    return requests.get(
+        url,
+        params=params,
+        timeout=4)
+
 
 
 @functions.cms_data_get_decorator()
@@ -162,7 +168,7 @@ log_data = login()
 # interests = functions.analyze_tracks_get_interests(tracks)
 
 
-def download_interest_videos(jsession, interests):
+def download_interest_videos(jsession, interests, split=False):
     for interest in interests:
         # if interests.index(interest) == 0:
         #    continue
@@ -175,33 +181,28 @@ def download_interest_videos(jsession, interests):
             start_time_datetime)
         end_time_seconds = functions.seconds_since_midnight(
             end_time_datetime)
-        start_time_seconds -= 1
-        end_time_seconds -= 1
-        time_splits = functions.split_time(
-            start_time=start_time_seconds,
-            end_time=end_time_seconds)
-        logger.debug(f"Got time splits: {time_splits}")
+
+        if split:
+            time_splits = functions.split_time(
+                start_time=start_time_seconds,
+                end_time=end_time_seconds)
+        else:
+            time_splits = [(start_time_seconds, end_time_seconds)]
+        logger.debug(f"Got time splits: {time_splits}. Split - {split}")
         download_tasks = []
         for time_split in time_splits:
             logger.debug(f"Working with time split - {time_split}")
-            result = 24
-            while result == 24:
-                try:
-                    response = get_video(
-                        jsession=jsession,
-                        device_id=interest["device_id"],
-                        start_time_seconds=time_split[0],
-                        end_time_seconds=time_split[1],
-                        year=str(start_time_datetime.year),
-                        month=str(start_time_datetime.month),
-                        day=str(start_time_datetime.day)
-                    )
-                    response_json = response.json()
-                    result = response_json["result"]
-                    logger.debug(f"Result: {response_json}")
-                except (requests.exceptions.ReadTimeout,
-                        requests.exceptions.ConnectTimeout) as err:
-                    logger.debug(f"Timeout. Repeat...")
+            response = get_video(
+                jsession=jsession,
+                device_id=interest["device_id"],
+                start_time_seconds=time_split[0],
+                end_time_seconds=time_split[1],
+                year=str(start_time_datetime.year),
+                month=str(start_time_datetime.month),
+                day=str(start_time_datetime.day)
+            )
+            response_json = response.json()
+            logger.debug(f"Result: {response_json}, {response.status_code}")
             if "files" not in response_json.keys():
                 continue
             files = response_json["files"]

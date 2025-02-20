@@ -1,4 +1,5 @@
 from qt_pvp.logger import logger
+from qt_pvp import settings
 import datetime
 import requests
 
@@ -11,6 +12,23 @@ def int_to_32bit_binary(number):
     bits = [int(bit) for bit in padded_binary_str]
     bits.reverse()
     return bits
+
+
+def form_add_download_task_url(reg_id, start_timestamp, end_timestamp,
+                               channel_id, reg_fph=None):
+    req_url = f"{settings.add_download_task}?" \
+              f"did={reg_id}" \
+              f"&fbtm={start_timestamp}" \
+              f"&fetm={end_timestamp}" \
+              f"&chn={channel_id}" \
+              f"&sbtm={datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}" \
+              f"&dtp=2" \
+              f"&ftp=2" \
+              f"&vtp=0"
+    return req_url
+
+
+# f"&fph={reg_fph}" \
 
 
 def analyze_s1(s1_int: int):
@@ -36,7 +54,7 @@ def analyze_tracks_get_interests(tracks, by_trigger=True):
     # print(tracks)
     if not by_trigger:
         start_time_datetime = datetime.datetime.strptime(
-                tracks[0]["gt"], "%Y-%m-%d %H:%M:%S")
+            tracks[0]["gt"], "%Y-%m-%d %H:%M:%S")
     for track in tracks:
         track_analyze = {}
         s1 = analyze_s1(track["s1"])
@@ -53,7 +71,8 @@ def analyze_tracks_get_interests(tracks, by_trigger=True):
             end_time = track_analyze["gps_upload_time"]
             end_time_datetime = datetime.datetime.strptime(
                 end_time, "%Y-%m-%d %H:%M:%S")
-            if start_time_datetime and (end_time_datetime - start_time_datetime).seconds >= 120:
+            if start_time_datetime and (
+                    end_time_datetime - start_time_datetime).seconds >= 120:
                 start_time = track_analyze["gps_upload_time"]
                 start_time_datetime = datetime.datetime.strptime(
                     start_time, "%Y-%m-%d %H:%M:%S")
