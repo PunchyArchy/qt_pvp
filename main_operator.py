@@ -166,30 +166,38 @@ class Main:
                     f"{reg_id}. Not found filepaths for interest "
                     f"{interest_name}")
                 continue
-            if len(interest["file_paths"]) > 1 and proc:
-                logger.info(f"{reg_id}. Converting videos...")
+            if len(interest["file_paths"]) > 1:
                 for video_path in interest["file_paths"]:
-                    logger.info(f"Converting {video_path}")
-                    converted_video = main_funcs.convert_video_file(
-                        video_path, output_dir=interest_temp_folder,
-                        output_format=self.output_format)
-                    # os.remove(video_path)
-                    if converted_video:
-                        converted_videos.append(converted_video)
+                    if proc:
+                        logger.info(f"Converting {video_path}")
+                        converted_video = main_funcs.convert_video_file(
+                            video_path, output_dir=interest_temp_folder,
+                            output_format=self.output_format)
+                        # os.remove(video_path)
+                        if converted_video:
+                            converted_videos.append(converted_video)
             elif len(interest["file_paths"]) == 1:
                 # Видео только одно
                 logger.info(
                     f"{reg_id}. Moving interest video to {output_video_path}")
                 source = os.path.normpath(interest["file_paths"][0])
                 shutil.copy(source, output_video_path)
-            if converted_videos:
+            if converted_videos or len(interest["file_paths"]) > 1:
+                if proc and converted_videos:
+                    logger.info("Concatenating converted videos")
+                    vids_for_concat = converted_videos
+                else:
+                    logger.info("Concatenating original videos")
+                    vids_for_concat = interest["file_paths"]
                 logger.info("Concatenating videos...")
                 main_funcs.concatenate_videos(
-                    converted_files=converted_videos,
+                    converted_files=vids_for_concat,
                     output_abs_name=output_video_path)
                 logger.info(f"{reg_id} Success concatenated {interest_name} "
                             f"to {output_video_path}")
                 shutil.rmtree(interest_temp_folder)
+                #for file_path in vids_for_concat:
+                #   os.remove(file_path)
             else:
                 logger.debug("No converted videos for concatenating found.")
         pvp_time_seconds = (datetime.datetime.now() - download_time).seconds
