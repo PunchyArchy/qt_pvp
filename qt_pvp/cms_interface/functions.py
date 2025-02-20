@@ -92,7 +92,7 @@ def analyze_tracks_get_interests(tracks, by_trigger=True):
                     "device_id": track_analyze["device_id"],
                 })
             continue
-        if track_analyze["io1"] and not start_time:
+        if (track_analyze["io1"] or track_analyze["io2"]) and not start_time:
             start_time = track_analyze["gps_upload_time"]
         elif track_analyze["speed"] > 60 and start_time:
             end_time = track_analyze["gps_upload_time"]
