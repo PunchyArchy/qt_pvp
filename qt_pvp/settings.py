@@ -11,7 +11,7 @@ INTERESTING_VIDEOS_FOLDER = os.path.join(CUR_DIR, "interesting_videos")
 TESTS_MISC_FOLDER = os.path.join(TESTS_FOLDER, "misc")
 LOGS_DIR = os.path.join(CUR_DIR, "logs")
 CONFIG_PATH = os.path.join(CUR_DIR, "config.cfg")
-CLOUD_PATH = posixpath.join("Tracker", "Видео выгрузок")
+CLOUD_PATH = posixpath.join("/Tracker", "Видео выгрузок")
 
 config = configparser.ConfigParser(
     inline_comment_prefixes='#',
