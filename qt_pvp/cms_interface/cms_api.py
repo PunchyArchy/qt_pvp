@@ -20,8 +20,8 @@ def get_online_devices(jsession, device_id=None):
 def login():
     data = requests.get(
         f"{settings.cms_host}/StandardApiAction_login.action?",
-        params={"account": "qodex",
-                "password": "qodex"})
+        params={"account": settings.cms_login,
+                "password": settings.cms_password})
     return data
 
 
@@ -66,14 +66,17 @@ def get_gps(jsession):
 @functions.cms_data_get_decorator()
 def get_device_track(jsession: str, device_id: str, start_time: str,
                      stop_time: str, page: int = None):
+    params = {"jsession": jsession,
+              "devIdno": device_id,
+              "begintime": start_time,
+              "endtime": stop_time,
+              "currentPage": page
+              }
+    print(params)
     response = requests.get(
         f"{settings.cms_host}/StandardApiAction_queryTrackDetail.action?",
-        params={"jsession": jsession,
-                "devIdno": device_id,
-                "begintime": start_time,
-                "endtime": stop_time,
-                "currentPage": page
-                })
+        params=params,
+        timeout=60)
     return response
 
 def get_device_status(jsession: str, device_id: str):

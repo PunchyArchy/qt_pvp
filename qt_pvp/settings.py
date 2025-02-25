@@ -1,4 +1,5 @@
 import configparser
+import posixpath
 import os
 
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -10,6 +11,7 @@ INTERESTING_VIDEOS_FOLDER = os.path.join(CUR_DIR, "interesting_videos")
 TESTS_MISC_FOLDER = os.path.join(TESTS_FOLDER, "misc")
 LOGS_DIR = os.path.join(CUR_DIR, "logs")
 CONFIG_PATH = os.path.join(CUR_DIR, "config.cfg")
+CLOUD_PATH = posixpath.join("Tracker", "Видео выгрузок")
 
 config = configparser.ConfigParser(
     inline_comment_prefixes='#',
@@ -28,3 +30,6 @@ add_download_task = f"{eumid_host}/StandardVideoTrackAction_addDownloadTask.acti
 
 cms_host = f"{config.get('CMS', 'schema')}{config.get('CMS', 'ip')}:" \
            f"{config.getint('CMS', 'port')}"
+
+cms_login = os.environ.get("cms_login")
+cms_password = os.environ.get("cms_login")

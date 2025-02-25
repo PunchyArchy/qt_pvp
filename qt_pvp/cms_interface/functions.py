@@ -118,6 +118,7 @@ def analyze_tracks_get_interests(tracks, by_trigger=True):
                 })
                 start_time = None
     logger.debug(f"Get interests: {interests}")
+    #raise ZeroDivisionError
     return interests
 
 

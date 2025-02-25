@@ -1,14 +1,14 @@
-import threading
-import time
-import traceback
-
 from qt_pvp.cms_interface import functions as cms_api_funcs
 from qt_pvp import functions as main_funcs
 from qt_pvp.cms_interface import cms_api
+from qt_pvp import cloud_uploader
 from qt_pvp.logger import logger
 from qt_pvp import settings
+import threading
+import traceback
 import datetime
 import shutil
+import time
 import os
 
 
@@ -210,6 +210,12 @@ class Main:
                    logger.debug(f"f{reg_id}. Deleted {file_path}.")
             else:
                 logger.debug("No converted videos for concatenating found.")
+            logger.info(f"{reg_id}. Uploading {interest_name} to cloud...")
+            upload_status = self.upload_interest_video_to_cloud(
+                output_video_path)
+            logger.info(f"{reg_id}. Uploading status - {upload_status}.")
+            if upload_status:
+                logger.info(f"{reg_id}. Deleted interest locally.")
         pvp_time_seconds = (datetime.datetime.now() - download_time).seconds
         main_funcs.save_new_reg_last_upload_time(reg_id, end_time)
         logger.info(f"{reg_id}. New last upload data - {end_time}")
@@ -222,6 +228,12 @@ class Main:
             f"Downloading take {download_seconds} seconds."
             f"PvP operations {pvp_time_seconds} seconds."
             f"it take {last} seconds in total.")
+
+    def upload_interest_video_to_cloud(self, interest_path, destination=None):
+        if not destination:
+            destination = settings.CLOUD_PATH
+        return cloud_uploader.upload_file(interest_path, destination)
+
 
     def mainloop(self):
         logger.info("Mainloop has been launched with success.")
