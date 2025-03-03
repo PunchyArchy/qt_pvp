@@ -26,7 +26,8 @@ class Main:
     def get_devices_online(self):
         devices_online = cms_api.get_online_devices(self.jsession)
         devices_online = devices_online.json()["onlines"]
-        logger.debug(f"Got devices online: {devices_online}")
+        if devices_online:
+            logger.debug(f"Got devices online: {devices_online}")
         return devices_online
 
     def download_all(self, devices_online: [] = None):
