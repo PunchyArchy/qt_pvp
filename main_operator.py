@@ -216,9 +216,13 @@ class Main:
             logger.info(f"{reg_id}. Uploading status - {upload_status}.")
             if upload_status:
                 logger.info(f"{reg_id}. Deleted interest locally.")
+        if interests_with_fp:
+            last_interest_time = self.get_last_interest_datetime(interests_with_fp)
+        else:
+            last_interest_time = end_time
         pvp_time_seconds = (datetime.datetime.now() - download_time).seconds
-        main_funcs.save_new_reg_last_upload_time(reg_id, end_time)
-        logger.info(f"{reg_id}. New last upload data - {end_time}")
+        main_funcs.save_new_reg_last_upload_time(reg_id, last_interest_time)
+        logger.info(f"{reg_id}. New last upload data - {last_interest_time}")
         main_funcs.clean_interests(reg_id)
         self.video_ready_trigger()
         last = (datetime.datetime.now() - begin_time).seconds
@@ -228,6 +232,10 @@ class Main:
             f"Downloading take {download_seconds} seconds."
             f"PvP operations {pvp_time_seconds} seconds."
             f"it take {last} seconds in total.")
+
+    def get_last_interest_datetime(self, interests):
+        last_interest = interests[-1]
+        return last_interest["end_time"]
 
     def upload_interest_video_to_cloud(self, interest_path, destination=None):
         if not destination:
