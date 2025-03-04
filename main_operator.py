@@ -129,9 +129,12 @@ class Main:
             start_time = main_funcs.get_reg_last_upload_time(reg_id)
         if not end_time:
             end_time = now
-        if (start_time - end_time).seconds > 21600:
-            end_time = start_time + datetime.timedelta(hours=6)
-            logger.debug("End time has been taken 6 hours ago from start one.")
+        try:
+            if (datetime.datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S") - begin_time).seconds > 21600:
+                end_time = start_time + datetime.timedelta(hours=6)
+                logger.debug("End time has been taken 6 hours ago from start one.")
+        except:
+            logger.critical(traceback.format_exc())
         logger.info(f"{reg_id}. Start time: {start_time}")
         logger.info(f"{reg_id}. End time: {end_time}")
         interests = self.get_interests(reg_id, start_time, end_time,
