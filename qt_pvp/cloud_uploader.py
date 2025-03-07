@@ -91,17 +91,60 @@ def main(local_directory, dest_directory):
             delete_local_file(full_file_path)
 
 
-def upload_file(file_path, dest_directory):
-    registr_name, date_str = parse_filename(os.path.basename(file_path))
+def upload_file(file_path, dest_directory, pics=None):
+    """
+    Загружает файл и фотографии в облако через WebDAV.
+
+    :param file_path: Путь к файлу для загрузки.
+    :param dest_directory: Базовая директория на удаленном сервере.
+    :param pics: Словарь с фотографиями (before и after).
+    :return: True, если все файлы загружены успешно, иначе False.
+    """
+    interest_name = os.path.basename(file_path)
+    registr_name, date_str = parse_filename(interest_name)
     # Формируем пути на удаленном сервере
     registr_folder = posixpath.join(dest_directory, registr_name)
     date_folder = f'{date_str}'
-    remote_folder_path = posixpath.join(registr_folder, date_folder)
+    date_folder_path = posixpath.join(registr_folder, date_folder)
+    interest_folder_path = posixpath.join(date_folder_path, interest_name)
+    before_pics_folder = posixpath.join(interest_folder_path, "before_pics")
+    after_pics_folder = posixpath.join(interest_folder_path, "after_pics")
     # Проверяем и создаем папки, если их нет
     create_folder_if_not_exists(client, registr_folder)
-    create_folder_if_not_exists(client, remote_folder_path)
-    # Загружаем файл на сервер
-    success = upload_file_to_cloud(
-        client, file_path, remote_folder_path)
-    return success
+    create_folder_if_not_exists(client, date_folder_path)
+    create_folder_if_not_exists(client, interest_folder_path)
+    create_folder_if_not_exists(client, before_pics_folder)
+    create_folder_if_not_exists(client, after_pics_folder)
+    # Загружаем основной файл на сервер
+    success = upload_file_to_cloud(client, file_path, interest_folder_path)
+    if not pics:
+        return success
+    # Загружаем фотографии из словаря pics
+    try:
+        # Обрабатываем before_pics
+        if "chanel_pics_before" in pics:
+            for chn, photo_path in pics["chanel_pics_before"].items():
+                if photo_path:  # Проверяем, что путь к фото не пустой
+                    photo_name = os.path.basename(photo_path)
+                    remote_path = posixpath.join(before_pics_folder, photo_name)
+                    upload_success = upload_file_to_cloud(client, photo_path, remote_path)
+                    if not upload_success:
+                        success = False  # Если хотя бы одно фото не загрузилось, отмечаем ошибку
+                    else:
+                        delete_local_file(photo_path)
+        # Обрабатываем after_pics
+        if "chanel_pics_after" in pics:
+            for chn, photo_path in pics["chanel_pics_after"].items():
+                if photo_path:  # Проверяем, что путь к фото не пустой
+                    photo_name = os.path.basename(photo_path)
+                    remote_path = posixpath.join(after_pics_folder, photo_name)
+                    upload_success = upload_file_to_cloud(client, photo_path, remote_path)
+                    if not upload_success:
+                        success = False  # Если хотя бы одно фото не загрузилось, отмечаем ошибку
+                    else:
+                        delete_local_file(photo_path)
+    except Exception as e:
+        print(f"Ошибка при загрузке фотографий: {e}")
+        success = False
 
+    return success

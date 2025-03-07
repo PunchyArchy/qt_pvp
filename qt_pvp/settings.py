@@ -32,4 +32,4 @@ cms_host = f"{config.get('CMS', 'schema')}{config.get('CMS', 'ip')}:" \
            f"{config.getint('CMS', 'port')}"
 
 cms_login = os.environ.get("cms_login")
-cms_password = os.environ.get("cms_login")
+cms_password = os.environ.get("cms_password")

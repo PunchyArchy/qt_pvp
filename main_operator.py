@@ -4,6 +4,7 @@ from qt_pvp.cms_interface import cms_api
 from qt_pvp import cloud_uploader
 from qt_pvp.logger import logger
 from qt_pvp import settings
+import asyncio
 import threading
 import traceback
 import datetime
@@ -129,12 +130,11 @@ class Main:
             start_time = main_funcs.get_reg_last_upload_time(reg_id)
         if not end_time:
             end_time = now
-        try:
-            if (datetime.datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S") - begin_time).seconds > 21600:
-                end_time = start_time + datetime.timedelta(hours=6)
-                logger.debug("End time has been taken 6 hours ago from start one.")
-        except:
-            logger.critical(traceback.format_exc())
+        if (datetime.datetime.strptime(start_time,
+                                       "%Y-%m-%d %H:%M:%S") - begin_time).seconds > 21600:
+            end_time = start_time + datetime.timedelta(hours=6)
+            logger.debug(
+                "End time has been taken 6 hours ago from start one.")
         logger.info(f"{reg_id}. Start time: {start_time}")
         logger.info(f"{reg_id}. End time: {end_time}")
         interests = self.get_interests(reg_id, start_time, end_time,
@@ -146,11 +146,7 @@ class Main:
         logger.info(f"{reg_id}. Generating and executing download tasks")
         cms_api.download_interest_videos(
             self.jsession, interests, chanel_id, split)
-        # url = cms_api_funcs.form_add_download_task_url(reg_id=reg_id,
-        #                                               start_timestamp=start_time,
-        #                                               end_timestamp=end_time,
-        #                                               channel_id=1)
-        # print(url)
+        logger.info(f"{reg_id}. Getting photos")
         interest_create_datetime = datetime.datetime.now()
         interest_create_seconds = (
                 interest_create_datetime - begin_time).seconds
@@ -165,6 +161,10 @@ class Main:
                     f"It take {download_seconds} seconds")
         for interest in interests_with_fp:
             interest_name = interest["name"]
+            alarm_pictures = self.get_alarm_pictures(
+                reg_id, beg_sec=interest["beg_sec"],
+                end_sec=interest["end_sec"], year=interest["year"],
+                month=interest["month"], day=interest["day"])
             logger.info(f"{reg_id}.  Working with interest {interest_name}")
             output_video_path = os.path.join(
                 settings.INTERESTING_VIDEOS_FOLDER,
@@ -214,18 +214,19 @@ class Main:
                             f"to {output_video_path}")
                 shutil.rmtree(interest_temp_folder)
                 for file_path in vids_for_concat:
-                   os.remove(file_path)
-                   logger.debug(f"f{reg_id}. Deleted {file_path}.")
+                    os.remove(file_path)
+                    logger.debug(f"f{reg_id}. Deleted {file_path}.")
             else:
                 logger.debug("No converted videos for concatenating found.")
             logger.info(f"{reg_id}. Uploading {interest_name} to cloud...")
             upload_status = self.upload_interest_video_to_cloud(
-                output_video_path)
+                output_video_path, pics=alarm_pictures)
             logger.info(f"{reg_id}. Uploading status - {upload_status}.")
             if upload_status:
                 logger.info(f"{reg_id}. Deleted interest locally.")
         if interests_with_fp:
-            last_interest_time = self.get_last_interest_datetime(interests_with_fp)
+            last_interest_time = self.get_last_interest_datetime(
+                interests_with_fp)
         else:
             last_interest_time = end_time
         pvp_time_seconds = (datetime.datetime.now() - download_time).seconds
@@ -241,15 +242,95 @@ class Main:
             f"PvP operations {pvp_time_seconds} seconds."
             f"it take {last} seconds in total.")
 
+    def get_alarm_pictures(self, reg_id, beg_sec, end_sec, year: int,
+                           month: int, day: int, channels: list = None):
+        # Синхронная обертка для асинхронного метода
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            # Если event loop уже запущен, используем его
+            return loop.run_until_complete(
+                self.get_alarm_pictures_async(reg_id, beg_sec, end_sec, year,
+                                              month, day, channels))
+        else:
+            # Если event loop не запущен, создаем новый
+            return asyncio.run(
+                self.get_alarm_pictures_async(reg_id, beg_sec, end_sec, year,
+                                              month, day, channels))
+
+    async def get_alarm_pictures_async(self, reg_id, beg_sec, end_sec,
+                                       year: int,
+                                       month: int, day: int,
+                                       channels: list = None):
+        """
+        Получает картинки до и после события для заданных каналов.
+
+        :param reg_id: ID регистратора.
+        :param beg_sec: Начало временного интервала (в секундах).
+        :param end_sec: Конец временного интервала (в секундах).
+        :param year: Год.
+        :param month: Месяц.
+        :param day: День.
+        :param channels: Список каналов. Если не указан, используются (0, 1, 2, 3).
+        :return: Словарь с картинками до и после события.
+        """
+        logger.debug("Getting pictures")
+        if not channels:
+            channels = (0, 1, 2, 3)
+        try:
+            # Получаем картинки до события
+            response_before = cms_api.get_video(
+                self.jsession,
+                reg_id=reg_id,
+                beg_sec=beg_sec - 10,
+                end_sec=beg_sec + 10,
+                year=year,
+                month=month,
+                day=day,
+                chanel_id=0,
+                fileattr=1
+            )
+            chanel_pics_before = await cms_api.fetch_photo_url(
+                response_before["files"], channels)
+            # Получаем картинки после события
+            response_after = cms_api.get_video(
+                self.jsession,
+                reg_id=reg_id,
+                beg_sec=end_sec - 10,
+                end_sec=end_sec + 10,
+                year=year,
+                month=month,
+                day=day,
+                chanel_id=0,
+                fileattr=1
+            )
+            chanel_pics_after = await cms_api.fetch_photo_url(
+                response_after["files"], channels)
+            logger.debug("Pictures retrieved successfully")
+            return {
+                "chanel_pics_before": chanel_pics_before,
+                "chanel_pics_after": chanel_pics_after
+            }
+        except Exception as e:
+            logger.error(f"Error while getting pictures: {e}")
+            return {
+                "chanel_pics_before": {},
+                "chanel_pics_after": {}
+            }
+
     def get_last_interest_datetime(self, interests):
         last_interest = interests[-1]
         return last_interest["end_time"]
 
-    def upload_interest_video_to_cloud(self, interest_path, destination=None):
+    def upload_interest_video_to_cloud(self, interest_path,
+                                       destination=None, pics=None):
         if not destination:
             destination = settings.CLOUD_PATH
-        return cloud_uploader.upload_file(interest_path, destination)
-
+        return cloud_uploader.upload_file(interest_path, destination,
+                                          pics=pics)
 
     def mainloop(self):
         logger.info("Mainloop has been launched with success.")
@@ -297,7 +378,7 @@ class Main:
 if __name__ == "__main__":
     d = Main()
     d.mainloop()
-    #d.download_reg_videos(
+    # d.download_reg_videos(
     #    "2024050601",
     #    chanel_id=0,
     #    start_time="2025-02-20 11:10:00",

@@ -1,2 +1,3 @@
 requests
 webdavclient3
+aiohttp

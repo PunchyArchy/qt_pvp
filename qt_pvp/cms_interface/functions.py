@@ -87,6 +87,11 @@ def analyze_tracks_get_interests(tracks, by_trigger=True):
                             f"{end_time_datetime.hour}-"
                             f"{end_time_datetime.minute}-"
                             f"{end_time_datetime.second}",
+                    "beg_sec": track_analyze["beg"],
+                    "end_sec": track_analyze["end"],
+                    "year": track_analyze["year"],
+                    "month": track_analyze["mon"],
+                    "day": track_analyze["day"],
                     "start_time": start_time,
                     "end_time": end_time,
                     "device_id": track_analyze["device_id"],
@@ -112,6 +117,11 @@ def analyze_tracks_get_interests(tracks, by_trigger=True):
                             f"{end_time_datetime.hour}-"
                             f"{end_time_datetime.minute}-"
                             f"{end_time_datetime.second}",
+                    "beg_sec": track_analyze["beg"],
+                    "end_sec": track_analyze["end"],
+                    "year": track_analyze["year"],
+                    "month": track_analyze["mon"],
+                    "day": track_analyze["day"],
                     "start_time": start_time,
                     "end_time": end_time,
                     "device_id": track_analyze["device_id"],

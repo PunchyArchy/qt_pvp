@@ -1,10 +1,11 @@
-import datetime
-import threading
-import time
 from qt_pvp.cms_interface import functions
 from qt_pvp.logger import logger
 from qt_pvp import settings
+import datetime
 import requests
+import aiohttp
+import asyncio
+import time
 
 
 @functions.cms_data_get_decorator()
@@ -27,25 +28,25 @@ def login():
 
 @functions.cms_data_get_decorator()
 def get_video(jsession, device_id: str, start_time_seconds: int,
-              end_time_seconds: int, year: int, month: int, day: str,
-              chanel_id: int = 0):
+              end_time_seconds: int, year: int, month: int, day: int,
+              chanel_id: int = 0, fileattr: int = 2):
     params = {"DevIDNO": device_id,
-                "LOC": 1,
-                "CHN": chanel_id,
-                "YEAR": int(year),
-                "MON": int(month),
-                "DAY": int(day),
-                "RECTYPE": -1,
-                "FILEATTR": 2,
-                "BEG": start_time_seconds,
-                "END": end_time_seconds,
-                "ARM1": 0,
-                "ARM2": 0,
-                "RES": 0, # RES 0
-                "STREAM": -1, #STREAM -1
-                "STORE": 0,
-                "jsession": jsession,
-                "DownType": 2}
+              "LOC": 1,
+              "CHN": chanel_id,
+              "YEAR": year,
+              "MON": month,
+              "DAY": day,
+              "RECTYPE": -1,
+              "FILEATTR": fileattr,
+              "BEG": start_time_seconds,
+              "END": end_time_seconds,
+              "ARM1": 0,
+              "ARM2": 0,
+              "RES": 0,  # RES 0
+              "STREAM": -1,  # STREAM -1
+              "STORE": 0,
+              "jsession": jsession,
+              "DownType": 2}
     url = f"{settings.cms_host}/StandardApiAction_getVideoFileInfo.action?"
     logger.debug(f"Getting request {url}. \nParams: {params}")
     return requests.get(
@@ -53,6 +54,58 @@ def get_video(jsession, device_id: str, start_time_seconds: int,
         params=params,
         timeout=4)
 
+
+async def fetch_photo_url(data_list, chn_values):
+    """
+    Функция для получения пути к фото (dph) по заданным значениям chn.
+    Работает только с самыми последними (свежими) записями для каждого chn.
+
+    :param data_list: Список словарей с данными (уже отсортированный, свежие записи идут последними).
+    :param chn_values: Список значений chn, которые нужно обработать.
+    :return: Словарь с результатами, где ключ — chn, значение — путь к фото (dph).
+    """
+    # Собираем последние записи для каждого chn
+    latest_items = {}
+    for item in data_list:
+        chn = item.get('chn')
+        if chn in chn_values:
+            # Просто перезаписываем значение для каждого chn
+            latest_items[chn] = item
+
+    results = {}
+    async with aiohttp.ClientSession() as session:
+        for chn, item in latest_items.items():
+            down_task_url = item.get('DownTaskUrl')
+            # Отправляем GET-запрос и ждем ответа
+            while True:
+                async with session.get(down_task_url) as response:
+                    data = await response.json()
+                    # Проверяем, появилось ли значение dph
+                    if data.get("oldTaskReal", {}).get("dph") is not None:
+                        results[chn] = data["oldTaskReal"]["dph"]
+                        break
+                    # Если dph еще не появился, ждем некоторое время
+                    await asyncio.sleep(1)  # Интервал проверки — 1 секунда
+
+    return results
+
+
+
+def get_alarms(jsession, reg_id, begin_time, end_time):
+    url = f"{settings.cms_host}/StandardApiAction_queryAlarmDetail.action?"
+    print(url)
+    params = {"jsession": jsession,
+              "devIdno": reg_id,
+              "begintime": begin_time,
+              # "begintime": to_timestamp(begin_time),
+              "endtime": end_time,
+              # "endtime": to_timestamp(end_time),
+              "armType": "19,20,69,70",
+              }
+    return requests.get(
+        url,
+        params=params
+    )
 
 
 @functions.cms_data_get_decorator()
@@ -79,6 +132,7 @@ def get_device_track(jsession: str, device_id: str, start_time: str,
         timeout=60)
     return response
 
+
 def get_device_status(jsession: str, device_id: str):
     response = requests.get(
         f"{settings.cms_host}/StandardApiAction_getDeviceStatus.action?",
@@ -86,6 +140,7 @@ def get_device_status(jsession: str, device_id: str):
                 "devIdno": device_id,
                 })
     return response
+
 
 def get_device_track_all_pages(jsession: str, device_id: str, start_time: str,
                                stop_time: str):
@@ -151,28 +206,6 @@ def get_interest_download_path(jsession, interest, remove_urls=True):
     return interest
 
 
-log_data = login()
-# print(log_data)
-# res = get_video(log_data["jsession"]).json()
-# if res["result"] == 32:
-#    pass
-# print(res)
-# files = res["files"]
-# file = files[0]
-# jsession = log_data["jsession"]
-# device_id = "104040"
-# print(file["DownTaskUrl"])
-# print("getting gps")
-# track = gps.json()["status"]
-# print(gps.json())
-# tracks = get_device_track_all_pages(jsession=jsession,
-# device_id=device_id,
-# start_time="2025-02-05 15:00:00",
-# stop_time="2025-02-05 16:00:00", )
-
-# interests = functions.analyze_tracks_get_interests(tracks)
-
-
 def download_interest_videos(jsession, interests, chanel_id, split=False):
     for interest in interests:
         # if interests.index(interest) == 0:
@@ -180,12 +213,10 @@ def download_interest_videos(jsession, interests, chanel_id, split=False):
         logger.debug(f"Working with interest - {interest}")
         start_time_datetime = datetime.datetime.strptime(
             interest["start_time"], "%Y-%m-%d %H:%M:%S")
-        end_time_datetime = datetime.datetime.strptime(
-            interest["end_time"], "%Y-%m-%d %H:%M:%S")
-        start_time_seconds = functions.seconds_since_midnight(
-            start_time_datetime)
-        end_time_seconds = functions.seconds_since_midnight(
-            end_time_datetime)
+        #end_time_datetime = datetime.datetime.strptime(
+        #    interest["end_time"], "%Y-%m-%d %H:%M:%S")
+        start_time_seconds = interest["beg_time"]
+        end_time_seconds = interest["end_time"]
         if split:
             time_splits = functions.split_time(
                 start_time=start_time_seconds,
@@ -203,9 +234,9 @@ def download_interest_videos(jsession, interests, chanel_id, split=False):
                 chanel_id=chanel_id,
                 start_time_seconds=time_split[0],
                 end_time_seconds=time_split[1],
-                year=str(start_time_datetime.year),
-                month=str(start_time_datetime.month),
-                day=str(start_time_datetime.day)
+                year=start_time_datetime.year,
+                month=start_time_datetime.month,
+                day=start_time_datetime.day
             )
             response_json = response.json()
             logger.debug(f"Result: {response_json}, {response.status_code}")
@@ -219,5 +250,46 @@ def download_interest_videos(jsession, interests, chanel_id, split=False):
                 download_tasks.append(download_task_url)
         interest["download_tasks"] = download_tasks
 
+
 # for interest in interests:
 #    get_interest_download_path(jsession, interest)
+
+
+# print(log_data)
+# if res["result"] == 32:
+#    pass
+# print(res)
+# files = res["files"]
+# file = files[0]
+# device_id = "104040"
+# print(file["DownTaskUrl"])
+# print("getting gps")
+# track = gps.json()["status"]
+# print(gps.json())
+# tracks = get_device_track_all_pages(jsession=jsession,
+# device_id=device_id,
+# start_time="2025-02-05 15:00:00",
+# stop_time="2025-02-05 16:00:00", )
+
+# interests = functions.analyze_tracks_get_interests(tracks)
+
+log_data = login().json()
+# res = get_video(log_data["jsession"]).json()
+
+print(log_data)
+jsession = log_data["jsession"]
+reg_id = "118270348452"
+begin_time = "2025-03-04 00:00:00",
+end_time = "2025-03-04 23:59:00"
+
+response = get_video(jsession,
+                     "118270348452",
+                     0,
+                     86300,
+                     2025,
+                     3,
+                     5,
+                     0,
+                     1)
+
+print(response.json())
