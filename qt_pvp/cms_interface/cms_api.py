@@ -214,6 +214,7 @@ async def download_interest_videos(jsession, interests, chanel_id,
     for interest in interests:
         # if interests.index(interest) == 0:
         #    continue
+        interest["file_paths"] = []
         logger.debug(f"Working with interest - {interest}")
         start_time_datetime = datetime.datetime.strptime(
             interest["start_time"], "%Y-%m-%d %H:%M:%S")
@@ -251,8 +252,10 @@ async def download_interest_videos(jsession, interests, chanel_id,
                 download_task_url = file["DownTaskUrl"]
                 # await execute_download_task(jsession=jsession,
                 #                      download_task_url=download_task_url)
-                await wait_and_get_dwn_url(jsession=jsession,
-                                           download_task_url=download_task_url)
+                file_path = await wait_and_get_dwn_url(
+                    jsession=jsession,
+                    download_task_url=download_task_url)
+                interest["file_paths"].append(file_path)
                 download_tasks.append(download_task_url)
         interest["download_tasks"] = download_tasks
 

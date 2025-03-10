@@ -119,11 +119,11 @@ class Main:
         # Получаем информацию о регистраторе
         reg_info = main_funcs.get_reg_info(
             reg_id) or main_funcs.create_new_reg(reg_id)
-        print(reg_info)
         chanel_id = reg_info.get("chanel_id",
                                  0)  # Если нет ID канала, ставим 0
 
         start_time = start_time or main_funcs.get_reg_last_upload_time(reg_id)
+
         end_time = end_time or begin_time.strftime("%Y-%m-%d %H:%M:%S")
 
         # Разбиваем длинные интервалы на отрезки
@@ -131,7 +131,6 @@ class Main:
                     datetime.datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S") -
                     datetime.datetime.strptime(start_time,
                                                "%Y-%m-%d %H:%M:%S")).total_seconds()
-        print(time_difference)
         if time_difference > 3600:
             end_time = (datetime.datetime.strptime(start_time,
                                                    "%Y-%m-%d %H:%M:%S") +
