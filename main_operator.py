@@ -240,10 +240,7 @@ class Main:
 
             logger.info(
                 f"{reg_id}: Конвертация {video_path} в {self.output_format}.")
-            converted_video = await asyncio.to_thread(
-                main_funcs.convert_video_file, video_path,
-                interest_temp_folder, self.output_format
-            )
+            converted_video = main_funcs.process_video_file(video_path)
 
             if converted_video:
                 converted_videos.append(converted_video)
@@ -315,9 +312,9 @@ class Main:
             # Получаем картинки до события
             response_before = cms_api.get_video(
                 self.jsession,
-                reg_id=reg_id,
-                beg_sec=beg_sec - 10,
-                end_sec=beg_sec + 10,
+                device_id=reg_id,
+                start_time_seconds=beg_sec - 10,
+                end_time_seconds=beg_sec + 10,
                 year=year,
                 month=month,
                 day=day,
@@ -329,9 +326,9 @@ class Main:
             # Получаем картинки после события
             response_after = cms_api.get_video(
                 self.jsession,
-                reg_id=reg_id,
-                beg_sec=end_sec - 10,
-                end_sec=end_sec + 10,
+                device_id=reg_id,
+                start_time_seconds=end_sec - 10,
+                end_time_seconds=end_sec + 10,
                 year=year,
                 month=month,
                 day=day,

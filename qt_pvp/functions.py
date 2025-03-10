@@ -5,6 +5,7 @@ import subprocess
 import datetime
 import requests
 import zipfile
+import ffmpeg
 import json
 import uuid
 import time
@@ -317,3 +318,66 @@ def check_if_file_old(file_abs_path, old_time_days=60):
     created_time = datetime.datetime.fromtimestamp(ti_m)
     if (datetime.datetime.now() - created_time).days >= old_time_days:
         return True
+
+def get_video_info(file_path):
+    """
+    Получает информацию о видеофайле: формат и видеокодек.
+    """
+    try:
+        probe = ffmpeg.probe(file_path)
+        format_name = probe['format']['format_name']
+        video_stream = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
+        video_codec = video_stream['codec_name'] if video_stream else None
+        return format_name, video_codec
+    except ffmpeg.Error as e:
+        logger.error(f"Ошибка при анализе файла {file_path}: {e.stderr}")
+        return None, None
+
+def convert_to_mp4_h264(input_file, output_file):
+    """
+    Конвертирует видеофайл в MP4 с кодеком H.264.
+    """
+    try:
+        (
+            ffmpeg
+            .input(input_file)
+            .output(output_file, vcodec='libx264', acodec='aac')
+            .run(overwrite_output=True)
+        )
+        logger.info(f"Файл успешно конвертирован: {output_file}")
+    except ffmpeg.Error as e:
+        logger.error(f"Ошибка при конвертации файла {input_file}: {e.stderr}")
+
+def process_video_file(file_path):
+    """
+    Обрабатывает видеофайл: проверяет формат и кодек, при необходимости конвертирует.
+    """
+    # Получаем информацию о файле
+    format_name, video_codec = get_video_info(file_path)
+    if not format_name or not video_codec:
+        logger.error(f"Не удалось получить информацию о файле: {file_path}")
+        return file_path
+
+    logger.info(f"Файл: {file_path}")
+    logger.info(f"Формат: {format_name}")
+    logger.info(f"Видеокодек: {video_codec}")
+
+    # Определяем, нужно ли конвертировать
+    need_conversion = False
+    if format_name != 'mp4':
+        need_conversion = True
+        logger.info("Файл не в формате MP4. Требуется конвертация.")
+    elif video_codec != 'h264':
+        need_conversion = True
+        logger.info("Файл в формате MP4, но кодек не H.264. Требуется конвертация.")
+    else:
+        logger.info("Файл уже в формате MP4 с кодеком H.264. Конвертация не требуется.")
+
+    # Конвертируем, если нужно
+    if need_conversion:
+        output_file = os.path.splitext(file_path)[0] + "_converted.mp4"
+        convert_to_mp4_h264(file_path, output_file)
+        return output_file
+    return file_path
+
+

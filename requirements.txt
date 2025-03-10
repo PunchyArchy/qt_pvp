@@ -1,3 +1,4 @@
 requests
 webdavclient3
 aiohttp
+ffmpeg-python
