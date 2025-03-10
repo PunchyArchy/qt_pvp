@@ -31,20 +31,12 @@ class Main:
             logger.debug(f"Got devices online: {devices_online}")
         return devices_online
 
-    def download_all(self, devices_online: [] = None):
-        logger.info("Downloading from all regs")
-        if not devices_online:
-            devices_online = self.get_devices_online()
-        for device_dict in devices_online:
-            reg_id = device_dict["vid"]
-            self.download_reg_videos(reg_id, by_trigger=True)
-
-    def operate_device(self, reg_id):
+    async def operate_device(self, reg_id):
         if reg_id in self.devices_in_progress:
             return
         self.devices_in_progress.append(reg_id)
         try:
-            self.download_reg_videos(reg_id, by_trigger=True)
+            await self.download_reg_videos(reg_id, by_trigger=True)
         except:
             logger.error(traceback.format_exc())
         else:
@@ -103,144 +95,184 @@ class Main:
                         f"{time_end.second}",
                 "start_time": time_start.strftime("%Y-%m-%d %H:%M:%S"),
                 "end_time": time_end.strftime("%Y-%m-%d %H:%M:%S"),
-                "device_id": reg_id, })
+                "device_id": reg_id,
+                "beg_sec": cms_api_funcs.seconds_since_midnight(time_start),
+                "end_sec": cms_api_funcs.seconds_since_midnight(time_end),
+                "year": time_start.year,
+                "month": time_start.month,
+                "day": time_start.day,
+            })
         logger.debug(f"{reg_id}. Got {len(interests)} fake interests.")
         return interests
 
-    def download_reg_videos(self, reg_id, chanel_id: int = None,
+    async def download_reg_videos(self, reg_id, chanel_id: int = None,
                             start_time=None, end_time=None,
                             by_trigger=False, proc=False, split: int = None):
-        logger.debug(f"Working with device {reg_id}")
+        logger.debug(f"Начинаем работу с устройством {reg_id}")
         begin_time = datetime.datetime.now()
-        now = begin_time.strftime("%Y-%m-%d %H:%M:%S")
+
+        # Проверка доступности регистратора
         if not self.check_if_reg_online(reg_id):
-            logger.info(f"{reg_id}. MDVR is offline")
+            logger.info(f"{reg_id} недоступен.")
             return
-        reg_info = main_funcs.get_reg_info(reg_id=reg_id)
-        if not reg_info:
-            reg_info = main_funcs.create_new_reg(reg_id)
-        if not chanel_id and "chanel_id" in reg_info.keys():
-            chanel_id = reg_info["chanel_id"]
-            logger.info(f"{reg_id}. Got chanel id {chanel_id} from json")
-        elif not chanel_id and "chanel_id" not in reg_info.keys():
-            logger.info(f"{reg_id}. Chanel id is not specified! "
-                        f"Chosen default id (0)")
-            chanel_id = 0
-        if not start_time:
-            start_time = main_funcs.get_reg_last_upload_time(reg_id)
-        if not end_time:
-            end_time = now
-        if (datetime.datetime.strptime(start_time,
-                                       "%Y-%m-%d %H:%M:%S") - begin_time).seconds > 21600:
-            end_time = start_time + datetime.timedelta(hours=6)
-            logger.debug(
-                "End time has been taken 6 hours ago from start one.")
-        logger.info(f"{reg_id}. Start time: {start_time}")
-        logger.info(f"{reg_id}. End time: {end_time}")
+
+        # Получаем информацию о регистраторе
+        reg_info = main_funcs.get_reg_info(
+            reg_id) or main_funcs.create_new_reg(reg_id)
+        print(reg_info)
+        chanel_id = reg_info.get("chanel_id",
+                                 0)  # Если нет ID канала, ставим 0
+
+        start_time = start_time or main_funcs.get_reg_last_upload_time(reg_id)
+        end_time = end_time or begin_time.strftime("%Y-%m-%d %H:%M:%S")
+
+        # Разбиваем длинные интервалы на отрезки
+        time_difference = (
+                    datetime.datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S") -
+                    datetime.datetime.strptime(start_time,
+                                               "%Y-%m-%d %H:%M:%S")).total_seconds()
+        print(time_difference)
+        if time_difference > 3600:
+            end_time = (datetime.datetime.strptime(start_time,
+                                                   "%Y-%m-%d %H:%M:%S") +
+                        datetime.timedelta(seconds=3600)).strftime(
+                "%Y-%m-%d %H:%M:%S")
+            print(end_time)
+
+        logger.info(f"{reg_id} Начало: {start_time}, Конец: {end_time}")
+
+        if reg_info["continuous"]:
+            by_trigger = False
+        # Определяем интересные интервалы
         interests = self.get_interests(reg_id, start_time, end_time,
                                        by_trigger)
         if not interests:
-            logger.info("No interests found")
+            logger.info("Нет интервалов интересов.")
+            main_funcs.save_new_reg_last_upload_time(reg_id,
+                                                     end_time)
             return
-        interests_with_fp = []
-        logger.info(f"{reg_id}. Generating and executing download tasks")
-        cms_api.download_interest_videos(
-            self.jsession, interests, chanel_id, split)
-        logger.info(f"{reg_id}. Getting photos")
-        interest_create_datetime = datetime.datetime.now()
-        interest_create_seconds = (
-                interest_create_datetime - begin_time).seconds
-        logger.info(f"{reg_id}. Getting downloaded videos...")
+
+        # Загружаем видео
+        await cms_api.download_interest_videos(self.jsession, interests,
+                                               chanel_id, split)
+
+        # Обрабатываем загруженные файлы
+        await self.process_and_upload_videos_async(reg_id, interests)
+
+        # Обновляем `last_upload_time`
+        last_interest_time = self.get_last_interest_datetime(
+            interests) if interests else end_time
+        main_funcs.save_new_reg_last_upload_time(reg_id, last_interest_time)
+        logger.info(
+            f"{reg_id} Обновлен `last_upload_time`: {last_interest_time}")
+
+    async def process_and_upload_videos_async(self, reg_id, interests):
+        logger.info(
+            f"{reg_id}: Начинаем асинхронную обработку {len(interests)} видео.")
+
         for interest in interests:
-            data = cms_api.get_interest_download_path(
-                self.jsession, interest)
-            interests_with_fp.append(data)
-        download_time = datetime.datetime.now()
-        download_seconds = (download_time - interest_create_datetime).seconds
-        logger.info(f"{reg_id}. Downloading done. "
-                    f"It take {download_seconds} seconds")
-        for interest in interests_with_fp:
             interest_name = interest["name"]
-            alarm_pictures = self.get_alarm_pictures(
-                reg_id, beg_sec=interest["beg_sec"],
-                end_sec=interest["end_sec"], year=interest["year"],
-                month=interest["month"], day=interest["day"])
-            logger.info(f"{reg_id}.  Working with interest {interest_name}")
+            file_paths = interest.get("file_paths", [])
+            if not file_paths:
+                logger.warning(
+                    f"{reg_id}: Нет видеофайлов для {interest_name}. Пропускаем.")
+                continue
+
+            # Запускаем скачивание фото и обработку видео ПАРАЛЛЕЛЬНО
+            alarm_pictures_task = asyncio.create_task(
+                self.get_alarm_pictures_async(
+                    reg_id,
+                    interest["beg_sec"],
+                    interest["end_sec"],
+                    interest["year"],
+                    interest["month"],
+                    interest["day"]
+                )
+            )
+
+            video_task = asyncio.create_task(
+                self.process_video_and_return_path(reg_id, interest,
+                                                   file_paths)
+            )
+
+            # Дожидаемся завершения обеих задач
+            alarm_pictures = await alarm_pictures_task
+            output_video_path = await video_task
+
+            if not output_video_path:
+                logger.warning(
+                    f"{reg_id}: Видео не было обработано. Пропускаем загрузку.")
+                continue
+
+            # Загружаем видео + фото тревоги в облако
+            logger.info(
+                f"{reg_id}: Загружаем {interest_name} в облако с фото тревоги.")
+            upload_status = await asyncio.to_thread(
+                cloud_uploader.upload_file, output_video_path,
+                settings.CLOUD_PATH, pics=alarm_pictures
+            )
+
+            if upload_status:
+                logger.info(
+                    f"{reg_id}: Загрузка прошла успешно. Удаляем локальный файл.")
+                os.remove(output_video_path)
+            else:
+                logger.error(f"{reg_id}: Ошибка загрузки {interest_name}.")
+
+        logger.info(f"{reg_id}: Обработка завершена.")
+
+    async def process_video_and_return_path(self, reg_id, interest,
+                                            file_paths):
+        """Обрабатывает видео и возвращает путь к финальному файлу."""
+        logger.info(
+            f"{reg_id}: Начинаем обработку видео для {interest['name']}.")
+
+        interest_name = interest["name"]
+        interest_temp_folder = os.path.join(settings.TEMP_FOLDER,
+                                            interest_name)
+        os.makedirs(interest_temp_folder, exist_ok=True)
+
+        converted_videos = []
+        for video_path in file_paths:
+            if not os.path.exists(video_path):
+                logger.warning(
+                    f"{reg_id}: Файл {video_path} не найден. Пропускаем.")
+                continue
+
+            logger.info(
+                f"{reg_id}: Конвертация {video_path} в {self.output_format}.")
+            converted_video = await asyncio.to_thread(
+                main_funcs.convert_video_file, video_path,
+                interest_temp_folder, self.output_format
+            )
+
+            if converted_video:
+                converted_videos.append(converted_video)
+                os.remove(
+                    video_path)  # Удаляем исходный файл после конвертации
+
+        # Объединяем видео, если их несколько
+        if len(converted_videos) > 1:
             output_video_path = os.path.join(
                 settings.INTERESTING_VIDEOS_FOLDER,
                 f"{interest_name}.{self.output_format}")
-            interest_temp_folder = os.path.join(
-                settings.TEMP_FOLDER, interest_name)
-            if not os.path.exists(interest_temp_folder):
-                os.makedirs(interest_temp_folder)
-            converted_videos = []
-            if None in interest["file_paths"]:
-                interest["file_paths"].remove(None)
-            if not interest["file_paths"]:
-                logger.error(
-                    f"{reg_id}. Not found filepaths for interest "
-                    f"{interest_name}")
-                continue
-            if len(interest["file_paths"]) > 1:
-                for video_path in interest["file_paths"]:
-                    if proc:
-                        logger.info(f"Converting {video_path}")
-                        converted_video = main_funcs.convert_video_file(
-                            video_path, output_dir=interest_temp_folder,
-                            output_format=self.output_format)
-                        os.remove(video_path)
-                        if converted_video:
-                            converted_videos.append(converted_video)
-            elif len(interest["file_paths"]) == 1:
-                # Видео только одно
-                logger.info(
-                    f"{reg_id}. Moving interest video to {output_video_path}")
-                source = os.path.normpath(interest["file_paths"][0])
-                shutil.copy(source, output_video_path)
-                os.remove(source)
-                logger.debug(f"f{reg_id}. Deleted {source}.")
-            if converted_videos or len(interest["file_paths"]) > 1:
-                if proc and converted_videos:
-                    logger.info("Concatenating converted videos")
-                    vids_for_concat = converted_videos
-                else:
-                    logger.info("Concatenating original videos")
-                    vids_for_concat = interest["file_paths"]
-                logger.info("Concatenating videos...")
-                main_funcs.concatenate_videos(
-                    converted_files=vids_for_concat,
-                    output_abs_name=output_video_path)
-                logger.info(f"{reg_id} Success concatenated {interest_name} "
-                            f"to {output_video_path}")
-                shutil.rmtree(interest_temp_folder)
-                for file_path in vids_for_concat:
-                    os.remove(file_path)
-                    logger.debug(f"f{reg_id}. Deleted {file_path}.")
-            else:
-                logger.debug("No converted videos for concatenating found.")
-            logger.info(f"{reg_id}. Uploading {interest_name} to cloud...")
-            upload_status = self.upload_interest_video_to_cloud(
-                output_video_path, pics=alarm_pictures)
-            logger.info(f"{reg_id}. Uploading status - {upload_status}.")
-            if upload_status:
-                logger.info(f"{reg_id}. Deleted interest locally.")
-        if interests_with_fp:
-            last_interest_time = self.get_last_interest_datetime(
-                interests_with_fp)
+            await asyncio.to_thread(main_funcs.concatenate_videos,
+                                    converted_videos, output_video_path)
+
+            # Удаляем временные файлы после объединения
+            shutil.rmtree(interest_temp_folder)
+            for file in converted_videos:
+                os.remove(file)
+
+        elif len(converted_videos) == 1:
+            output_video_path = converted_videos[
+                0]  # Если одно видео, просто используем его
+
         else:
-            last_interest_time = end_time
-        pvp_time_seconds = (datetime.datetime.now() - download_time).seconds
-        main_funcs.save_new_reg_last_upload_time(reg_id, last_interest_time)
-        logger.info(f"{reg_id}. New last upload data - {last_interest_time}")
-        main_funcs.clean_interests(reg_id)
-        self.video_ready_trigger()
-        last = (datetime.datetime.now() - begin_time).seconds
-        logger.info(
-            f"{reg_id}. All works are done. "
-            f"Interests creating take {interest_create_seconds} seconds."
-            f"Downloading take {download_seconds} seconds."
-            f"PvP operations {pvp_time_seconds} seconds."
-            f"it take {last} seconds in total.")
+            logger.warning(f"{reg_id}: После обработки не осталось видео.")
+            return None  # Возвращаем None, если видео не обработано
+
+        return output_video_path
 
     def get_alarm_pictures(self, reg_id, beg_sec, end_sec, year: int,
                            month: int, day: int, channels: list = None):
@@ -332,14 +364,15 @@ class Main:
         return cloud_uploader.upload_file(interest_path, destination,
                                           pics=pics)
 
-    def mainloop(self):
+    async def mainloop(self):
         logger.info("Mainloop has been launched with success.")
         while True:
             devices_online = self.get_devices_online()
             for device_dict in devices_online:
                 reg_id = device_dict["vid"]
-                self.operate_device(reg_id)
-            time.sleep(5)
+                print(reg_id)
+                await self.operate_device(reg_id)
+            await asyncio.sleep(5)
 
     def check_if_reg_online(self, reg_id):
         devices_online = self.get_devices_online()
@@ -377,7 +410,9 @@ class Main:
 
 if __name__ == "__main__":
     d = Main()
-    d.mainloop()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(d.mainloop())
+
     # d.download_reg_videos(
     #    "2024050601",
     #    chanel_id=0,

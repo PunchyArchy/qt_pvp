@@ -117,8 +117,6 @@ def upload_file(file_path, dest_directory, pics=None):
     create_folder_if_not_exists(client, after_pics_folder)
     # Загружаем основной файл на сервер
     success = upload_file_to_cloud(client, file_path, interest_folder_path)
-    if not pics:
-        return success
     # Загружаем фотографии из словаря pics
     try:
         # Обрабатываем before_pics
@@ -128,9 +126,7 @@ def upload_file(file_path, dest_directory, pics=None):
                     photo_name = os.path.basename(photo_path)
                     remote_path = posixpath.join(before_pics_folder, photo_name)
                     upload_success = upload_file_to_cloud(client, photo_path, remote_path)
-                    if not upload_success:
-                        success = False  # Если хотя бы одно фото не загрузилось, отмечаем ошибку
-                    else:
+                    if upload_success:
                         delete_local_file(photo_path)
         # Обрабатываем after_pics
         if "chanel_pics_after" in pics:
@@ -139,12 +135,9 @@ def upload_file(file_path, dest_directory, pics=None):
                     photo_name = os.path.basename(photo_path)
                     remote_path = posixpath.join(after_pics_folder, photo_name)
                     upload_success = upload_file_to_cloud(client, photo_path, remote_path)
-                    if not upload_success:
-                        success = False  # Если хотя бы одно фото не загрузилось, отмечаем ошибку
-                    else:
+                    if upload_success:
                         delete_local_file(photo_path)
     except Exception as e:
         print(f"Ошибка при загрузке фотографий: {e}")
         success = False
-
     return success

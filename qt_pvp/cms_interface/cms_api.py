@@ -90,7 +90,6 @@ async def fetch_photo_url(data_list, chn_values):
     return results
 
 
-
 def get_alarms(jsession, reg_id, begin_time, end_time):
     url = f"{settings.cms_host}/StandardApiAction_queryAlarmDetail.action?"
     print(url)
@@ -160,21 +159,25 @@ def get_device_track_all_pages(jsession: str, device_id: str, start_time: str,
     return all_tracks
 
 
-@functions.cms_data_get_decorator()
-def execute_download_task(jsession, download_task_url: str, return_path=False):
-    response = requests.get(download_task_url,
-                            params={
-                                "jsession": jsession
-                            })
-    return response
+@functions.cms_data_get_decorator_async()
+async def execute_download_task(jsession, download_task_url: str):
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(download_task_url,
+                                   params={"jsession": jsession}) as response:
+                response.raise_for_status()
+                return await response.json()
+    except aiohttp.ClientError as e:
+        logger.error(f"HTTP request failed: {e}")
+        return None
 
 
-def wait_and_get_dwn_url(jsession, download_task_url):
+async def wait_and_get_dwn_url(jsession, download_task_url):
     logger.info("Downloading...")
     while True:
-        response = execute_download_task(jsession=jsession,
-                                         download_task_url=download_task_url)
-        response_json = response.json()
+        response_json = await execute_download_task(
+            jsession=jsession,
+            download_task_url=download_task_url)
         result = response_json["result"]
         if result == 11 and response_json["oldTaskAll"]["dph"]:
             logger.info(f"{response_json['oldTaskAll']['id']}. Download done!")
@@ -206,17 +209,18 @@ def get_interest_download_path(jsession, interest, remove_urls=True):
     return interest
 
 
-def download_interest_videos(jsession, interests, chanel_id, split=False):
+async def download_interest_videos(jsession, interests, chanel_id,
+                                   split=False):
     for interest in interests:
         # if interests.index(interest) == 0:
         #    continue
         logger.debug(f"Working with interest - {interest}")
         start_time_datetime = datetime.datetime.strptime(
             interest["start_time"], "%Y-%m-%d %H:%M:%S")
-        #end_time_datetime = datetime.datetime.strptime(
-        #    interest["end_time"], "%Y-%m-%d %H:%M:%S")
-        start_time_seconds = interest["beg_time"]
-        end_time_seconds = interest["end_time"]
+        # end_time_datetime = datetime.datetime.strptime(
+        #    interest["end_time"], "%Y-%m-%d %H:%M:%S")F
+        start_time_seconds = interest["beg_sec"]
+        end_time_seconds = interest["end_sec"]
         if split:
             time_splits = functions.split_time(
                 start_time=start_time_seconds,
@@ -245,11 +249,12 @@ def download_interest_videos(jsession, interests, chanel_id, split=False):
             files = response_json["files"]
             for file in files:
                 download_task_url = file["DownTaskUrl"]
-                execute_download_task(jsession=jsession,
-                                      download_task_url=download_task_url)
+                # await execute_download_task(jsession=jsession,
+                #                      download_task_url=download_task_url)
+                await wait_and_get_dwn_url(jsession=jsession,
+                                           download_task_url=download_task_url)
                 download_tasks.append(download_task_url)
         interest["download_tasks"] = download_tasks
-
 
 # for interest in interests:
 #    get_interest_download_path(jsession, interest)
@@ -272,24 +277,3 @@ def download_interest_videos(jsession, interests, chanel_id, split=False):
 # stop_time="2025-02-05 16:00:00", )
 
 # interests = functions.analyze_tracks_get_interests(tracks)
-
-log_data = login().json()
-# res = get_video(log_data["jsession"]).json()
-
-print(log_data)
-jsession = log_data["jsession"]
-reg_id = "118270348452"
-begin_time = "2025-03-04 00:00:00",
-end_time = "2025-03-04 23:59:00"
-
-response = get_video(jsession,
-                     "118270348452",
-                     0,
-                     86300,
-                     2025,
-                     3,
-                     5,
-                     0,
-                     1)
-
-print(response.json())

@@ -272,7 +272,10 @@ def create_new_reg(reg_id):
     info["regs"][reg_id] = {
         "interests": [],
         "chanel_id": 0,
-        "last_upload_time": last_upload.strftime("%Y-%m-%d %H:%M:%S")}
+        "last_upload_time": last_upload.strftime("%Y-%m-%d %H:%M:%S"),
+        "door_limit_switch": 0,
+        "lifting_limit_switch": 0
+    }
     save_new_states_to_file(info)
 
 

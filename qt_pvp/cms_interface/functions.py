@@ -2,7 +2,8 @@ from qt_pvp.logger import logger
 from qt_pvp import settings
 import datetime
 import requests
-
+import functools
+import asyncio
 
 def int_to_32bit_binary(number):
     # Переводим число в двоичную строку без префикса '0b'
@@ -152,6 +153,41 @@ def seconds_since_midnight(dt: datetime.datetime) -> int:
     delta = dt - midnight
     return int(delta.total_seconds())
 
+
+def cms_data_get_decorator_async(max_retries=3, delay=1):
+    """
+    Декоратор для повторного выполнения запросов к CMS серверу в случае ошибок.
+    :param max_retries: Максимальное количество попыток.
+    :param delay: Задержка между попытками (в секундах).
+    """
+
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            retries = 0
+            while retries < max_retries:
+                try:
+                    # Выполняем асинхронную функцию
+                    result = await func(*args, **kwargs)
+                    # Проверяем ответ (предполагаем, что ответ — это JSON)
+                    if isinstance(result, dict) and result.get(
+                            "result") == 24:
+                        raise ValueError("Invalid response from CMS server")
+
+                    # Если ответ корректен, возвращаем его
+                    return result
+                except (ValueError, Exception) as e:
+                    retries += 1
+                    logger.warning(
+                        f"Attempt {retries} failed: {e}. Retrying in {delay} seconds...")
+                    await asyncio.sleep(delay)
+
+            # Если все попытки исчерпаны, вызываем исключение
+            raise Exception(f"Failed after {max_retries} retries")
+
+        return wrapper
+
+    return decorator
 
 def cms_data_get_decorator(tag='execute func'):
     # Main body
