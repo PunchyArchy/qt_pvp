@@ -6,6 +6,7 @@ import datetime
 import requests
 import zipfile
 import ffmpeg
+import shutil
 import json
 import uuid
 import time
@@ -335,61 +336,63 @@ def get_video_info(file_path):
         logger.error(f"Ошибка при анализе файла {file_path}: {e.stderr}")
         return None, None
 
-def get_video_codec(input_file):
-    """Определяет кодек видеофайла."""
-    try:
-        probe = ffmpeg.probe(input_file)
-        video_streams = [stream for stream in probe["streams"] if
-                         stream["codec_type"] == "video"]
-        if not video_streams:
-            raise ValueError("Видео поток не найден")
-        return video_streams[0]["codec_name"]
-    except Exception as e:
-        logger.error(f"Не удалось определить кодек для {input_file}: {e}")
-        return None
-
 
 def convert_to_mp4_h264(input_file, output_file):
     """
     Конвертирует видео в MP4 с кодеком H.264.
-    Если входное видео уже соответствует формату, просто копирует его.
+    1) MP4, H.264 → копируем без изменений
+    2) IFV-файл (метаданные битые) → обрабатываем как H.265, FPS=5
+    3) MP4, H.265 → перекодируем в H.264
     """
     try:
         input_ext = os.path.splitext(input_file)[-1].lower()
-        video_codec = get_video_codec(input_file)
 
-        if input_ext == ".mp4" and video_codec == "h264":
+        # 1) Если файл уже MP4 с H.264, просто копируем
+        if input_ext == ".mp4":
+            video_codec = get_video_codec(input_file)
+            if video_codec == "h264":
+                logger.info(
+                    f"Файл {input_file} уже в формате MP4, H.264. Копируем без изменений.")
+                shutil.copy(input_file, output_file)
+                return
+
+        # 2) Если файл содержит ".ifv" в названии, обрабатываем его как H.265, FPS=5
+        if ".ifv" in input_file:
             logger.info(
-                f"Файл {input_file} уже в формате MP4, H.264. Копируем без изменений.")
-            os.rename(input_file, output_file)
-            return
+                f"Файл {input_file} определен как IFV. Предполагаем кодек H.265, FPS=5.")
 
-        temp_file = output_file.replace('.mp4', '_temp.mp4')
+            temp_file = output_file.replace('.mp4', '_temp.mp4')
 
-        # Перепаковка IFV в MP4 (без перекодирования)
-        if input_ext == ".ifv":
-            logger.info(f"Перепаковываем {input_file} в MP4.")
-            ffmpeg.input(input_file,
-                         format='hevc' if video_codec == "hevc" else "h264").output(
-                temp_file, vcodec="copy", acodec="copy"
+            # Перепаковываем IFV в MP4 (без перекодировки)
+            ffmpeg.input(input_file, format="hevc").output(
+                temp_file, vcodec="copy", acodec="copy", r=5
             ).run(overwrite_output=True)
+
             input_file = temp_file
 
-        # Если кодек H.265, перекодируем в H.264
-        if video_codec == "hevc" or input_ext == ".ifv":
-            logger.info(f"Конвертируем {input_file} в H.264.")
-            ffmpeg.input(input_file).output(output_file, vcodec="libx264",
-                                            acodec="aac").run(
-                overwrite_output=True)
-        else:
-            logger.info(
-                f"Файл {input_file} не требует конвертации, копируем в {output_file}.")
-            os.rename(input_file, output_file)
+        # 3) Если кодек H.265 (HEVC) или мы обрабатывали IFV, перекодируем в H.264
+        logger.info(f"Конвертируем {input_file} в MP4 (H.264).")
+        ffmpeg.input(input_file).output(output_file, vcodec="libx264",
+                                        acodec="aac", r=5).run(
+            overwrite_output=True
+        )
 
         logger.info(f"Файл успешно обработан: {output_file}")
 
     except ffmpeg.Error as e:
         logger.error(f"Ошибка при обработке файла {input_file}: {e.stderr}")
+
+
+def get_video_codec(file_path):
+    """
+    Определяет видеокодек файла через ffmpeg.
+    """
+    try:
+        probe = ffmpeg.probe(file_path)
+        return probe["streams"][0]["codec_name"]
+    except Exception as e:
+        logger.warning(f"Не удалось определить кодек для {file_path}: {e}")
+        return None  # Если не удалось определить, возвращаем None
 
 
 def process_video_file(file_path):

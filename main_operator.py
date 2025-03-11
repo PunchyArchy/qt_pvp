@@ -248,8 +248,9 @@ class Main:
 
             if converted_video:
                 converted_videos.append(converted_video)
-                os.remove(
-                    video_path)  # Удаляем исходный файл после конвертации
+                if os.path.exists(video_path):
+                    os.remove(
+                        video_path)  # Удаляем исходный файл после конвертации
 
         # Объединяем видео, если их несколько
         if len(converted_videos) > 1:
