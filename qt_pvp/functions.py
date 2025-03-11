@@ -361,19 +361,9 @@ def convert_to_mp4_h264(input_file, output_file):
             logger.info(
                 f"Файл {input_file} определен как IFV. Предполагаем кодек H.265, FPS=5.")
 
-            temp_file = output_file.replace('.mp4', '_temp.mp4')
-
-            # Перепаковываем IFV в MP4 (без перекодировки)
-            ffmpeg.input(input_file, format="hevc", fflags='+genpts').output(
-                temp_file, vcodec="copy", acodec="copy", r=5,
-            ).run(overwrite_output=True)
-
-            input_file = temp_file
-
         # 3) Если кодек H.265 (HEVC) или мы обрабатывали IFV, перекодируем в H.264
         logger.info(f"Конвертируем {input_file} в MP4 (H.264).")
-        ffmpeg.input(input_file).output(output_file, vcodec="libx264",
-                                        acodec="aac", r=5).run(
+        ffmpeg.input(input_file, vcodec="hevc").output(output_file, vcodec="libx264", preset="medium").run(
             overwrite_output=True
         )
 
