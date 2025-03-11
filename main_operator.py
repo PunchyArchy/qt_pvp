@@ -196,7 +196,10 @@ class Main:
             )
 
             # Дожидаемся завершения обеих задач
-            alarm_pictures = await alarm_pictures_task
+            if settings.config.getboolean("General", "pics_before_after"):
+                alarm_pictures = await alarm_pictures_task
+            else:
+                alarm_pictures = None
             output_video_path = await video_task
 
             if not output_video_path:

@@ -335,8 +335,6 @@ def get_video_info(file_path):
         logger.error(f"Ошибка при анализе файла {file_path}: {e.stderr}")
         return None, None
 
-r = get_video_info(r"C:\Users\faizi\Downloads\fly00123.ifv-offset139462656fly00123.ifv-offset139462656")
-print(r)
 def get_video_codec(input_file):
     """Определяет кодек видеофайла."""
     try:
