@@ -177,17 +177,18 @@ class Main:
                     f"{reg_id}: Нет видеофайлов для {interest_name}. Пропускаем.")
                 continue
 
-            # Запускаем скачивание фото и обработку видео ПАРАЛЛЕЛЬНО
-            alarm_pictures_task = asyncio.create_task(
-                self.get_alarm_pictures_async(
-                    reg_id,
-                    interest["beg_sec"],
-                    interest["end_sec"],
-                    interest["year"],
-                    interest["month"],
-                    interest["day"]
+            if settings.config.getboolean("General", "pics_before_after"):
+                # Запускаем скачивание фото и обработку видео ПАРАЛЛЕЛЬНО
+                alarm_pictures_task = asyncio.create_task(
+                    self.get_alarm_pictures_async(
+                        reg_id,
+                        interest["beg_sec"],
+                        interest["end_sec"],
+                        interest["year"],
+                        interest["month"],
+                        interest["day"]
+                    )
                 )
-            )
 
             video_task = asyncio.create_task(
                 self.process_video_and_return_path(reg_id, interest,
@@ -320,7 +321,7 @@ class Main:
                 day=day,
                 chanel_id=0,
                 fileattr=1
-            )
+            ).json()
             chanel_pics_before = await cms_api.fetch_photo_url(
                 response_before["files"], channels)
             # Получаем картинки после события

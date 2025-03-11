@@ -297,7 +297,6 @@ def save_new_reg_last_upload_time(reg_id, timestamp):
     save_new_states_to_file(states)
 
 
-
 def video_remover_cycle():
     while True:
         all_videos = get_all_files(settings.INTERESTING_VIDEOS_FOLDER)
@@ -319,21 +318,25 @@ def check_if_file_old(file_abs_path, old_time_days=60):
     if (datetime.datetime.now() - created_time).days >= old_time_days:
         return True
 
+
 def get_video_info(file_path):
     """
     Получает информацию о видеофайле: формат и видеокодек.
     """
     try:
         probe = ffmpeg.probe(file_path)
+        print(probe)
         format_name = probe['format']['format_name']
-        video_stream = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
+        video_stream = next((stream for stream in probe['streams'] if
+                             stream['codec_type'] == 'video'), None)
         video_codec = video_stream['codec_name'] if video_stream else None
         return format_name, video_codec
     except ffmpeg.Error as e:
         logger.error(f"Ошибка при анализе файла {file_path}: {e.stderr}")
         return None, None
 
-
+r = get_video_info(r"C:\Users\faizi\Downloads\fly00123.ifv-offset139462656fly00123.ifv-offset139462656")
+print(r)
 def get_video_codec(input_file):
     """Определяет кодек видеофайла."""
     try:
@@ -412,9 +415,11 @@ def process_video_file(file_path):
         logger.info("Файл не в формате MP4. Требуется конвертация.")
     elif video_codec != 'h264':
         need_conversion = True
-        logger.info("Файл в формате MP4, но кодек не H.264. Требуется конвертация.")
+        logger.info(
+            "Файл в формате MP4, но кодек не H.264. Требуется конвертация.")
     else:
-        logger.info("Файл уже в формате MP4 с кодеком H.264. Конвертация не требуется.")
+        logger.info(
+            "Файл уже в формате MP4 с кодеком H.264. Конвертация не требуется.")
 
     # Конвертируем, если нужно
     if need_conversion:
@@ -422,5 +427,3 @@ def process_video_file(file_path):
         convert_to_mp4_h264(file_path, output_file)
         return output_file
     return file_path
-
-
