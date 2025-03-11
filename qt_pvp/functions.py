@@ -349,36 +349,36 @@ def convert_to_mp4_h264(input_file, output_file):
         if input_ext == ".mp4":
             video_codec = get_video_codec(input_file)
             if video_codec == "h264":
-                logger.info(
-                    f"Файл {input_file} уже в формате MP4 H.264, копируем без изменений.")
+                logger.info(f"Файл {input_file} уже в формате MP4 H.264, копируем без изменений.")
                 os.rename(input_file, output_file)
                 return
-
-        temp_file = output_file.replace(".mp4", "_temp.mp4")
 
         # Если IFV, исправляем временные метки перед конвертацией
         if ".ifv" in input_file:
             logger.info(f"Исправляем временные метки в {input_file}.")
-            fixed_file = input_file.replace(".ifv", "_fixed.ifv")
+            temp_fixed_file = input_file + "_fixed.ifv"
             (
                 ffmpeg
                 .input(input_file, fflags='+genpts')
-                .output(fixed_file, c='copy')
+                .output(temp_fixed_file, c='copy')
                 .run(overwrite_output=True)
             )
-            input_file = fixed_file
+            input_file = temp_fixed_file  # Используем исправленный файл дальше
 
         # Конвертация в MP4 H.264
         logger.info(f"Конвертируем {input_file} в MP4 H.264.")
         (
             ffmpeg
             .input(input_file)
-            .output(output_file, vcodec="libx264", preset="slow", crf=23,
-                    acodec="aac", b_a="128k")
+            .output(output_file, vcodec="libx264", preset="slow", crf=23, acodec="aac", b_a="128k")
             .run(overwrite_output=True)
         )
 
         logger.info(f"Файл успешно обработан: {output_file}")
+
+        # Удаляем временный файл, если он был создан
+        if ".ifv" in input_file:
+            os.remove(temp_fixed_file)
 
     except ffmpeg.Error as e:
         logger.error(f"Ошибка при обработке файла {input_file}: {e.stderr}")
