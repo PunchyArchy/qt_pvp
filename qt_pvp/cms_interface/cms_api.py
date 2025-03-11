@@ -196,6 +196,7 @@ async def wait_and_get_dwn_url(jsession, download_task_url):
 def get_interest_download_path(jsession, interest, remove_urls=True):
     file_paths = []
     if "download_tasks" in interest.keys():
+        interest["download_tasks"].sort()
         for task_url in interest["download_tasks"]:
             file_path = wait_and_get_dwn_url(
                 jsession=jsession,
