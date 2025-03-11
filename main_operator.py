@@ -139,6 +139,7 @@ class Main:
         else:
             logger.debug(f"f{reg_id}. Time difference is too short "
                          f"({time_difference} сек.)")
+            return
         logger.info(f"{reg_id} Начало: {start_time}, Конец: {end_time}")
 
         if reg_info["continuous"]:
