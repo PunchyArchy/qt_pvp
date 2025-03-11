@@ -136,8 +136,9 @@ class Main:
                                                    "%Y-%m-%d %H:%M:%S") +
                         datetime.timedelta(seconds=3600)).strftime(
                 "%Y-%m-%d %H:%M:%S")
-            print(end_time)
-
+        else:
+            logger.debug(f"f{reg_id}. Time difference is too short "
+                         f"({time_difference} сек.)")
         logger.info(f"{reg_id} Начало: {start_time}, Конец: {end_time}")
 
         if reg_info["continuous"]:
