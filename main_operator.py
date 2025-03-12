@@ -3,6 +3,7 @@ from qt_pvp import functions as main_funcs
 from qt_pvp.cms_interface import cms_api
 from qt_pvp import cloud_uploader
 from qt_pvp.logger import logger
+from pathlib import Path
 from qt_pvp import settings
 import asyncio
 import threading
@@ -237,6 +238,10 @@ class Main:
                                             interest_name)
         os.makedirs(interest_temp_folder, exist_ok=True)
 
+        final_interest_video_name = os.path.join(
+            settings.INTERESTING_VIDEOS_FOLDER,
+            f"{interest_name}.{self.output_format}")
+
         converted_videos = []
         for video_path in file_paths:
             if not os.path.exists(video_path):
@@ -256,11 +261,9 @@ class Main:
 
         # Объединяем видео, если их несколько
         if len(converted_videos) > 1:
-            output_video_path = os.path.join(
-                settings.INTERESTING_VIDEOS_FOLDER,
-                f"{interest_name}.{self.output_format}")
             await asyncio.to_thread(main_funcs.concatenate_videos,
-                                    converted_videos, output_video_path)
+                                    converted_videos,
+                                    final_interest_video_name)
 
             # Удаляем временные файлы после объединения
             shutil.rmtree(interest_temp_folder)
@@ -270,12 +273,14 @@ class Main:
         elif len(converted_videos) == 1:
             output_video_path = converted_videos[
                 0]  # Если одно видео, просто используем его
+            os.rename(output_video_path,
+                      final_interest_video_name)
 
         else:
             logger.warning(f"{reg_id}: После обработки не осталось видео.")
             return None  # Возвращаем None, если видео не обработано
 
-        return output_video_path
+        return final_interest_video_name
 
     def get_alarm_pictures(self, reg_id, beg_sec, end_sec, year: int,
                            month: int, day: int, channels: list = None):
