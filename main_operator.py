@@ -43,10 +43,8 @@ class Main:
         else:
             self.devices_in_progress.remove(reg_id)
 
-    def get_interests(self, reg_id, start_time, stop_time, by_trigger):
-        interest_saved = main_funcs.get_interests(reg_id)
-        reg_info = main_funcs.get_reg_info(
-            reg_id) or main_funcs.create_new_reg(reg_id)
+    def get_interests(self, reg_id, reg_info, start_time, stop_time):
+        interest_saved = main_funcs.get_interests(reg_info["id"])
         if not interest_saved:
             tracks = cms_api.get_device_track_all_pages(
                 jsession=self.jsession,
@@ -54,64 +52,23 @@ class Main:
                 start_time=start_time,
                 stop_time=stop_time,
             )
-            if by_trigger:
+            interests = cms_api_funcs.analyze_tracks_get_interests(
+                tracks=tracks,
+                by_stops=reg_info["by_stops"],
+                continuous=reg_info["continuous"],
+                by_lifting_limit_switch=reg_info["by_lifting_limit_switch"],
 
-                interests = cms_api_funcs.analyze_tracks_get_interests(
-                    tracks, by_trigger, by_stops=reg_info["by_stops"])
-                main_funcs.save_new_interests(reg_id, interests)
-            else:
-                interests = self.generate_fake_interests(
-                    reg_id, start_time, stop_time, interval_sec=0)
+            )
+            main_funcs.save_new_interests(reg_id, interests)
         else:
             logger.info("Found saved interests in json")
             interests = interest_saved
         return interests
 
-    def generate_fake_interests(self, reg_id, start_time, end_time,
-                                interval_sec=30):
-        logger.debug(f"{reg_id}. Generating fake interests in time range "
-                     f"from {start_time} to {end_time}")
-        start_time_dt = datetime.datetime.strptime(start_time,
-                                                   "%Y-%m-%d %H:%M:%S")
-        end_time_dt = datetime.datetime.strptime(end_time,
-                                                 "%Y-%m-%d %H:%M:%S")
-        if interval_sec:
-            time_splits = main_funcs.split_time_range_to_dicts(
-                start_time_dt, end_time_dt,
-                datetime.timedelta(seconds=interval_sec))
-        else:
-            time_splits = [{"time_start": start_time_dt,
-                            "time_end": end_time_dt}]
-        interests = []
-        for split in time_splits:
-            time_start = split["time_start"]
-            time_end = split["time_end"]
-            interests.append({
-                "name": f"{reg_id}_"
-                        f"{time_start.year}."
-                        f"{time_start.month}."
-                        f"{time_start.day} "
-                        f"{time_start.hour}-"
-                        f"{time_start.minute}-"
-                        f"{time_start.second}_"
-                        f"{time_end.hour}-"
-                        f"{time_end.minute}-"
-                        f"{time_end.second}",
-                "start_time": time_start.strftime("%Y-%m-%d %H:%M:%S"),
-                "end_time": time_end.strftime("%Y-%m-%d %H:%M:%S"),
-                "device_id": reg_id,
-                "beg_sec": cms_api_funcs.seconds_since_midnight(time_start),
-                "end_sec": cms_api_funcs.seconds_since_midnight(time_end),
-                "year": time_start.year,
-                "month": time_start.month,
-                "day": time_start.day,
-            })
-        logger.debug(f"{reg_id}. Got {len(interests)} fake interests.")
-        return interests
-
     async def download_reg_videos(self, reg_id, chanel_id: int = None,
-                            start_time=None, end_time=None,
-                            by_trigger=False, proc=False, split: int = None):
+                                  start_time=None, end_time=None,
+                                  by_trigger=False, proc=False,
+                                  split: int = None):
         logger.debug(f"Начинаем работу с устройством {reg_id}")
         begin_time = datetime.datetime.now()
 
@@ -132,9 +89,9 @@ class Main:
 
         # Разбиваем длинные интервалы на отрезки
         time_difference = (
-                    datetime.datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S") -
-                    datetime.datetime.strptime(start_time,
-                                               "%Y-%m-%d %H:%M:%S")).total_seconds()
+                datetime.datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S") -
+                datetime.datetime.strptime(start_time,
+                                           "%Y-%m-%d %H:%M:%S")).total_seconds()
         if time_difference > 3600:
             end_time = (datetime.datetime.strptime(start_time,
                                                    "%Y-%m-%d %H:%M:%S") +
@@ -146,23 +103,22 @@ class Main:
             return
         logger.info(f"{reg_id} Начало: {start_time}, Конец: {end_time}")
 
-        if reg_info["continuous"]:
-            by_trigger = False
         # Определяем интересные интервалы
-        interests = self.get_interests(reg_id, start_time, end_time,
-                                       by_trigger)
+        interests = self.get_interests(reg_id, reg_info, start_time, end_time)
         if not interests:
             logger.info("Нет интервалов интересов.")
             main_funcs.save_new_reg_last_upload_time(reg_id,
                                                      end_time)
             return
 
-        # Загружаем видео
-        await cms_api.download_interest_videos(self.jsession, interests,
-                                               chanel_id, split)
+        for interest in interests:
+            logger.info(f"Работаем с интересом {interest}")
+            # Загружаем видео
+            await cms_api.download_interest_videos(self.jsession, interest,
+                                                   chanel_id, split)
 
-        # Обрабатываем загруженные файлы
-        await self.process_and_upload_videos_async(reg_id, interests)
+            # Обрабатываем загруженные файлы
+            await self.process_and_upload_videos_async(reg_id, interest)
 
         # Обновляем `last_upload_time`
         last_interest_time = self.get_last_interest_datetime(
@@ -171,71 +127,67 @@ class Main:
         logger.info(
             f"{reg_id} Обновлен `last_upload_time`: {last_interest_time}")
 
-    async def process_and_upload_videos_async(self, reg_id, interests):
-        logger.info(
-            f"{reg_id}: Начинаем асинхронную обработку {len(interests)} видео.")
-
-        for interest in interests:
-            interest_name = interest["name"]
-            file_paths = interest.get("file_paths", [])
-            if not file_paths:
-                logger.warning(
-                    f"{reg_id}: Нет видеофайлов для {interest_name}. Пропускаем.")
-                continue
-
-            if settings.config.getboolean("General", "pics_before_after"):
-                # Запускаем скачивание фото и обработку видео ПАРАЛЛЕЛЬНО
-                alarm_pictures_task = asyncio.create_task(
-                    self.get_alarm_pictures_async(
-                        reg_id,
-                        interest["beg_sec"],
-                        interest["end_sec"],
-                        interest["year"],
-                        interest["month"],
-                        interest["day"]
-                    )
+    async def process_and_upload_videos_async(self, reg_id, interest):
+        interest_name = interest["name"]
+        file_paths = interest.get("file_paths", [])
+        if not file_paths:
+            logger.warning(
+                f"{reg_id}: Нет видеофайлов для {interest_name}. Пропускаем.")
+            return
+        '''
+        if settings.config.getboolean("General", "pics_before_after"):
+            # Запускаем скачивание фото и обработку видео ПАРАЛЛЕЛЬНО
+            alarm_pictures_task = asyncio.create_task(
+                self.get_alarm_pictures_async(
+                    reg_id,
+                    interest["beg_sec"],
+                    interest["end_sec"],
+                    interest["year"],
+                    interest["month"],
+                    interest["day"]
                 )
-
-            video_task = asyncio.create_task(
-                self.process_video_and_return_path(reg_id, interest,
-                                                   file_paths)
             )
+        '''
+        video_task = asyncio.create_task(
+            self.process_video_and_return_path(reg_id, interest,
+                                               file_paths)
+        )
 
-            # Дожидаемся завершения обеих задач
-            if settings.config.getboolean("General", "pics_before_after"):
-                alarm_pictures = await alarm_pictures_task
-            else:
-                alarm_pictures = None
-            output_video_path = await video_task
+        # Дожидаемся завершения обеих задач
+        '''
+        if settings.config.getboolean("General", "pics_before_after"):
+            alarm_pictures = await alarm_pictures_task
+        else:
+            alarm_pictures = None
+        '''
+        output_video_path = await video_task
 
-            if not output_video_path:
-                logger.warning(
-                    f"{reg_id}: Видео не было обработано. Пропускаем загрузку.")
-                continue
+        if not output_video_path:
+            logger.warning(
+                f"{reg_id}: Нечего выгружать на облако ({output_video_path}).")
+            return
 
-            # Загружаем видео + фото тревоги в облако
+        # Загружаем видео + фото тревоги в облако
+        logger.info(
+            f"{reg_id}: Загружаем {interest_name} в облако с фото тревоги.")
+        upload_status = await asyncio.to_thread(
+            cloud_uploader.upload_file, output_video_path,
+            settings.CLOUD_PATH, pics=None
+        )
+
+        if upload_status:
             logger.info(
-                f"{reg_id}: Загружаем {interest_name} в облако с фото тревоги.")
-            upload_status = await asyncio.to_thread(
-                cloud_uploader.upload_file, output_video_path,
-                settings.CLOUD_PATH, pics=alarm_pictures
-            )
+                f"{reg_id}: Загрузка прошла успешно. Удаляем локальный файл.")
+            os.remove(output_video_path)
+        else:
+            logger.error(f"{reg_id}: Ошибка загрузки {interest_name}.")
 
-            if upload_status:
-                logger.info(
-                    f"{reg_id}: Загрузка прошла успешно. Удаляем локальный файл.")
-                os.remove(output_video_path)
-            else:
-                logger.error(f"{reg_id}: Ошибка загрузки {interest_name}.")
-
-        logger.info(f"{reg_id}: Обработка завершена.")
 
     async def process_video_and_return_path(self, reg_id, interest,
                                             file_paths):
         """Обрабатывает видео и возвращает путь к финальному файлу."""
         logger.info(
-            f"{reg_id}: Начинаем обработку видео для {interest['name']}.")
-
+            f"{reg_id}: Начинаем обработку видео {file_paths} для {interest['name']}.")
         interest_name = interest["name"]
         interest_temp_folder = os.path.join(settings.TEMP_FOLDER,
                                             interest_name)
@@ -247,6 +199,7 @@ class Main:
 
         converted_videos = []
         for video_path in file_paths:
+            logger.debug(f"Работаем с {video_path}")
             if not os.path.exists(video_path):
                 logger.warning(
                     f"{reg_id}: Файл {video_path} не найден. Пропускаем.")
@@ -259,6 +212,7 @@ class Main:
             if converted_video:
                 converted_videos.append(converted_video)
                 if os.path.exists(video_path):
+                    logger.info(f"{reg_id}. Удаляю исходный файл {video_path}")
                     os.remove(
                         video_path)  # Удаляем исходный файл после конвертации
 
@@ -390,33 +344,6 @@ class Main:
         for device_dict in devices_online:
             if reg_id == device_dict["vid"]:
                 return True
-
-    def trace_reg_state(self, reg_id):
-        online_was = False
-        bat_discharge_was = 0
-        while True:
-            device_status = self.get_devices_online()
-            if not device_status:
-                online_cur = 0
-            else:
-                online_cur = device_status[0]["online"]
-            if online_cur != online_was:
-                logger.info(f"Reg {reg_id} status has changed! "
-                            f"(Was {online_was} to {online_cur})")
-                online_was = online_cur
-            if online_cur:
-                status = cms_api.get_device_status(self.jsession, reg_id)
-                status_json = status.json()
-                if not status_json["result"] == 0:
-                    logger.error(f"Get device status error: {status_json}")
-                status = status_json["status"][0]
-                s1_status = cms_api_funcs.analyze_s1(status["s1"])
-                bat_discharge_status = s1_status["io1"]
-                if bat_discharge_status != bat_discharge_was:
-                    logger.info(
-                        f"Bat discharge status changed! "
-                        f"({bat_discharge_was} to {bat_discharge_status})")
-            time.sleep(3)
 
 
 if __name__ == "__main__":

@@ -186,79 +186,35 @@ async def wait_and_get_dwn_url(jsession, download_task_url):
             return response_json["oldTaskAll"]["dph"]
         else:
             time.sleep(2)
-    # while result != 11:
-    #    if not return_path:
-    #        break
-    #    response_json = response.json()
-    #    return response_json["oldTaskAll"]["dph"]
 
 
-def get_interest_download_path(jsession, interest, remove_urls=True):
-    file_paths = []
-    if "download_tasks" in interest.keys():
-        interest["download_tasks"].sort()
-        for task_url in interest["download_tasks"]:
-            file_path = wait_and_get_dwn_url(
-                jsession=jsession,
-                download_task_url=task_url)
-            file_paths.append(file_path)
-        if remove_urls:
-            interest.pop("download_tasks")
-    logger.debug(f"Found file paths {file_paths} "
-                 f"for interest {interest['name']}")
-    interest["file_paths"] = file_paths
-    return interest
-
-
-async def download_interest_videos(jsession, interests, chanel_id,
+async def download_interest_videos(jsession, interest, chanel_id,
                                    split=False):
-    for interest in interests:
-        # if interests.index(interest) == 0:
-        #    continue
-        interest["file_paths"] = []
-        logger.debug(f"Working with interest - {interest}")
-        start_time_datetime = datetime.datetime.strptime(
-            interest["start_time"], "%Y-%m-%d %H:%M:%S")
-        # end_time_datetime = datetime.datetime.strptime(
-        #    interest["end_time"], "%Y-%m-%d %H:%M:%S")F
-        start_time_seconds = interest["beg_sec"]
-        end_time_seconds = interest["end_sec"]
-        if split:
-            time_splits = functions.split_time(
-                start_time=start_time_seconds,
-                end_time=end_time_seconds,
-                split=split)
-        else:
-            time_splits = [(start_time_seconds, end_time_seconds)]
-        logger.debug(f"Got time splits: {time_splits}. Split - {split}")
-        download_tasks = []
-        for time_split in time_splits:
-            logger.debug(f"Working with time split - {time_split}")
-            response = get_video(
-                jsession=jsession,
-                device_id=interest["device_id"],
-                chanel_id=chanel_id,
-                start_time_seconds=time_split[0],
-                end_time_seconds=time_split[1],
-                year=start_time_datetime.year,
-                month=start_time_datetime.month,
-                day=start_time_datetime.day
-            )
-            response_json = response.json()
-            logger.debug(f"Result: {response_json}, {response.status_code}")
-            if "files" not in response_json.keys():
-                continue
-            files = response_json["files"]
-            for file in files:
-                download_task_url = file["DownTaskUrl"]
-                # await execute_download_task(jsession=jsession,
-                #                      download_task_url=download_task_url)
-                file_path = await wait_and_get_dwn_url(
-                    jsession=jsession,
-                    download_task_url=download_task_url)
-                interest["file_paths"].append(file_path)
-                download_tasks.append(download_task_url)
-        interest["download_tasks"] = download_tasks
+    logger.info(f"Загружаем видео...")
+    start_time_datetime = datetime.datetime.strptime(
+        interest["start_time"], "%Y-%m-%d %H:%M:%S")
+    download_tasks = []
+    response = get_video(
+        jsession=jsession,
+        device_id=interest["device_id"],
+        chanel_id=chanel_id,
+        start_time_seconds=interest["beg_sec"],
+        end_time_seconds=interest["end_sec"],
+        year=start_time_datetime.year,
+        month=start_time_datetime.month,
+        day=start_time_datetime.day
+    )
+    response_json = response.json()
+    logger.debug(f"J: {response_json}, {response.status_code}")
+    files = response_json["files"]
+    for file in files:
+        download_task_url = file["DownTaskUrl"]
+        file_path = await wait_and_get_dwn_url(
+            jsession=jsession,
+            download_task_url=download_task_url)
+        interest["file_paths"].append(file_path)
+        download_tasks.append(download_task_url)
+    interest["download_tasks"] = download_tasks
 
 # for interest in interests:
 #    get_interest_download_path(jsession, interest)

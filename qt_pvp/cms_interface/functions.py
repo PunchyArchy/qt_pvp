@@ -104,90 +104,52 @@ def find_stops(tracks):
     return stop_intervals
 
 
-def analyze_tracks_get_interests(tracks, by_trigger=True, by_stops=False):
-    # was_stop = None
+def find_lifting_switches(tracks):
+    stop_intervals = []
     start_time = None
-    start_time_datetime = None
+    gt_time = None
+    logger.info("Getting interests by stops")
+    for track in tracks:
+        speed = track.get("sp", 0)
+        s1_analyze = analyze_s1(track["s1"])
+        switch = s1_analyze["io3"] or s1_analyze["io4"]
+        if switch:
+            pass
+        gt_time = track.get("gt")
+        if gt_time:
+            current_time = gt_time
+        else:
+            continue
+
+        if speed <= 50:
+            if start_time is None:
+                start_time = current_time
+        else:
+            if start_time is not None:
+                stop_intervals.append(
+                    get_interest_from_track(track, start_time, current_time))
+
+    if start_time is not None and gt_time:
+        stop_intervals.append(
+            get_interest_from_track(
+                tracks[-1], start_time, gt_time))
+
+    return stop_intervals
+
+
+def analyze_tracks_get_interests(tracks, by_stops=False,
+                                 continuous=False,
+                                 by_lifting_limit_switch=False):
+    # was_stop = None
     interests = []
     # print(tracks)
-    if not by_trigger:
-        start_time_datetime = datetime.datetime.strptime(
-            tracks[0]["gt"], "%Y-%m-%d %H:%M:%S")
     if by_stops:
-        return find_stops(tracks)
-    for track in tracks:
-        track_analyze = {}
-        s1 = analyze_s1(track["s1"])
-        track_analyze.update(s1)
-        track_analyze["speed"] = track["sp"]
-        track_analyze["mlng"] = track["mlng"]
-        track_analyze["mlat"] = track["mlat"]
-        track_analyze["geo_pos"] = track["ps"]
-        track_analyze["parking_time"] = track["pk"]
-        track_analyze["mileage"] = track["lc"]
-        track_analyze["gps_upload_time"] = track["gt"]
-        track_analyze["device_id"] = track["vid"]
-        if not by_trigger:
-            end_time = track_analyze["gps_upload_time"]
-            end_time_datetime = datetime.datetime.strptime(
-                end_time, "%Y-%m-%d %H:%M:%S")
-            if start_time_datetime and (
-                    end_time_datetime - start_time_datetime).seconds >= 120:
-                start_time = track_analyze["gps_upload_time"]
-                start_time_datetime = datetime.datetime.strptime(
-                    start_time, "%Y-%m-%d %H:%M:%S")
-                interests.append({
-                    "name": f"{track_analyze['device_id']}_"
-                            f"{start_time_datetime.year}."
-                            f"{start_time_datetime.month}."
-                            f"{start_time_datetime.day} "
-                            f"{start_time_datetime.hour}-"
-                            f"{start_time_datetime.minute}-"
-                            f"{start_time_datetime.second}_"
-                            f"{end_time_datetime.hour}-"
-                            f"{end_time_datetime.minute}-"
-                            f"{end_time_datetime.second}",
-                    "beg_sec": track_analyze["beg"],
-                    "end_sec": track_analyze["end"],
-                    "year": track_analyze["year"],
-                    "month": track_analyze["mon"],
-                    "day": track_analyze["day"],
-                    "start_time": start_time,
-                    "end_time": end_time,
-                    "device_id": track_analyze["device_id"],
-                })
-        else:
-            if (track_analyze["io1"] or track_analyze[
-                "io2"]) and not start_time:
-                start_time = track_analyze["gps_upload_time"]
-            elif track_analyze["speed"] > 60 and start_time:
-                end_time = track_analyze["gps_upload_time"]
-                start_time_datetime = datetime.datetime.strptime(
-                    start_time, "%Y-%m-%d %H:%M:%S")
-                end_time_datetime = datetime.datetime.strptime(
-                    end_time, "%Y-%m-%d %H:%M:%S")
-                if start_time_datetime < end_time_datetime:
-                    interests.append({
-                        "name": f"{track_analyze['device_id']}_"
-                                f"{start_time_datetime.year}."
-                                f"{start_time_datetime.month}."
-                                f"{start_time_datetime.day} "
-                                f"{start_time_datetime.hour}-"
-                                f"{start_time_datetime.minute}-"
-                                f"{start_time_datetime.second}_"
-                                f"{end_time_datetime.hour}-"
-                                f"{end_time_datetime.minute}-"
-                                f"{end_time_datetime.second}",
-                        "beg_sec": track_analyze["beg"],
-                        "end_sec": track_analyze["end"],
-                        "year": track_analyze["year"],
-                        "month": track_analyze["mon"],
-                        "day": track_analyze["day"],
-                        "start_time": start_time,
-                        "end_time": end_time,
-                        "device_id": track_analyze["device_id"],
-                    })
-                    start_time = None
+        interests = find_stops(tracks)
+    elif by_lifting_limit_switch:
+        pass
+    elif continuous:
+        interests = get_interest_from_track(
+            tracks[-1], tracks[0]["gt"], tracks[-1]["gt"])
     logger.debug(f"Get interests: {interests}")
     # raise ZeroDivisionError
     return interests
