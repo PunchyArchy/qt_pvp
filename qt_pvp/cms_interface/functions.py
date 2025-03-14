@@ -48,6 +48,33 @@ def analyze_s1(s1_int: int):
     }
 
 
+def get_interest_from_track(track, start_time: int, end_time: int):
+    start_time_datetime = datetime.datetime.fromtimestamp(
+        start_time)
+    end_time_datetime = datetime.datetime.fromtimestamp(
+        end_time)
+    return {
+        "name": f"{track['vid']}_"
+                f"{start_time_datetime.year}."
+                f"{start_time_datetime.month}."
+                f"{start_time_datetime.day} "
+                f"{start_time_datetime.hour}-"
+                f"{start_time_datetime.minute}-"
+                f"{start_time_datetime.second}_"
+                f"{end_time_datetime.hour}-"
+                f"{end_time_datetime.minute}-"
+                f"{end_time_datetime.second}",
+        "beg_sec": seconds_since_midnight(start_time_datetime),
+        "end_sec": seconds_since_midnight(end_time_datetime),
+        "year": start_time_datetime.year,
+        "month": start_time_datetime.month,
+        "day": start_time_datetime.day,
+        "start_time": start_time,
+        "end_time": end_time,
+        "device_id": track["vid"],
+    }
+
+
 def find_stops(tracks):
     stop_intervals = []
     start_time = None
@@ -69,54 +96,13 @@ def find_stops(tracks):
                 start_time = current_time
         else:
             if start_time is not None:
-                start_time_datetime = datetime.datetime.fromtimestamp(start_time)
-                end_time_datetime = datetime.datetime.fromtimestamp(current_time)
-                stop_intervals.append({
-                    "name": f"{track['vid']}_"
-                            f"{start_time_datetime.year}."
-                            f"{start_time_datetime.month}."
-                            f"{start_time_datetime.day} "
-                            f"{start_time_datetime.hour}-"
-                            f"{start_time_datetime.minute}-"
-                            f"{start_time_datetime.second}_"
-                            f"{end_time_datetime.hour}-"
-                            f"{end_time_datetime.minute}-"
-                            f"{end_time_datetime.second}",
-                    "beg_sec": track["beg"],
-                    "end_sec": track["end"],
-                    "year": track["year"],
-                    "month": track["mon"],
-                    "day": track["day"],
-                    "start_time": start_time,
-                    "end_time": current_time,
-                    "device_id": track["vid"],
-                })
-                start_time = None
+                stop_intervals.append(
+                    get_interest_from_track(track, start_time, current_time))
 
     if start_time is not None:
-        start_time_datetime = datetime.datetime.fromtimestamp(start_time)
-        end_time_datetime = datetime.datetime.fromtimestamp(
-            tracks[-1]["gps_upload_time"])
-        stop_intervals.append({
-            "name": f"{tracks[-1]['vid']}_"
-                    f"{start_time_datetime.year}."
-                    f"{start_time_datetime.month}."
-                    f"{start_time_datetime.day} "
-                    f"{start_time_datetime.hour}-"
-                    f"{start_time_datetime.minute}-"
-                    f"{start_time_datetime.second}_"
-                    f"{end_time_datetime.hour}-"
-                    f"{end_time_datetime.minute}-"
-                    f"{end_time_datetime.second}",
-            "beg_sec": tracks[-1]["beg"],
-            "end_sec": tracks[-1]["end"],
-            "year": tracks[-1]["year"],
-            "month": tracks[-1]["mon"],
-            "day": tracks[-1]["day"],
-            "start_time": start_time,
-            "end_time": tracks[-1]["gps_upload_time"],
-            "device_id": tracks[-1]["vid"],
-        })
+        stop_intervals.append(
+            get_interest_from_track(
+                tracks[-1], start_time, tracks[-1].get("gt")))
 
     return stop_intervals
 
