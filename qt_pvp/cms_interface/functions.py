@@ -48,11 +48,11 @@ def analyze_s1(s1_int: int):
     }
 
 
-def get_interest_from_track(track, start_time: int, end_time: int):
-    start_time_datetime = datetime.datetime.fromtimestamp(
-        start_time)
-    end_time_datetime = datetime.datetime.fromtimestamp(
-        end_time)
+def get_interest_from_track(track, start_time: str, end_time: str):
+    start_time_datetime = datetime.datetime.strptime(
+        start_time, "%Y-%m-%d %H:%M:%S")
+    end_time_datetime = datetime.datetime.strptime(
+        start_time, "%Y-%m-%d %H:%M:%S")
     return {
         "name": f"{track['vid']}_"
                 f"{start_time_datetime.year}."
@@ -78,16 +78,13 @@ def get_interest_from_track(track, start_time: int, end_time: int):
 def find_stops(tracks):
     stop_intervals = []
     start_time = None
+    gt_time = None
 
     for track in tracks:
         speed = track.get("sp", 0)
         gt_time = track.get("gt")
         if gt_time:
-            try:
-                current_time = int(datetime.datetime.strptime(
-                    gt_time, "%Y-%m-%d %H:%M:%S").timestamp())
-            except ValueError:
-                continue
+            current_time = gt_time
         else:
             continue
 
@@ -99,11 +96,10 @@ def find_stops(tracks):
                 stop_intervals.append(
                     get_interest_from_track(track, start_time, current_time))
 
-    if start_time is not None and tracks:
+    if start_time is not None and gt_time:
         stop_intervals.append(
             get_interest_from_track(
-                tracks[-1], start_time, int(datetime.datetime.strptime(
-                    tracks[-1]["gt"], "%Y-%m-%d %H:%M:%S").timestamp())))
+                tracks[-1], start_time, gt_time))
 
     return stop_intervals
 
