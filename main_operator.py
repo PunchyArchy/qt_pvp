@@ -45,6 +45,8 @@ class Main:
 
     def get_interests(self, reg_id, start_time, stop_time, by_trigger):
         interest_saved = main_funcs.get_interests(reg_id)
+        reg_info = main_funcs.get_reg_info(
+            reg_id) or main_funcs.create_new_reg(reg_id)
         if not interest_saved:
             tracks = cms_api.get_device_track_all_pages(
                 jsession=self.jsession,
@@ -53,8 +55,9 @@ class Main:
                 stop_time=stop_time,
             )
             if by_trigger:
+
                 interests = cms_api_funcs.analyze_tracks_get_interests(
-                    tracks, by_trigger)
+                    tracks, by_trigger, by_stops=reg_info["by_stops"])
                 main_funcs.save_new_interests(reg_id, interests)
             else:
                 interests = self.generate_fake_interests(
