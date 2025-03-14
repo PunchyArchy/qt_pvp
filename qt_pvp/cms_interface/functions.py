@@ -99,10 +99,11 @@ def find_stops(tracks):
                 stop_intervals.append(
                     get_interest_from_track(track, start_time, current_time))
 
-    if start_time is not None:
+    if start_time is not None and tracks:
         stop_intervals.append(
             get_interest_from_track(
-                tracks[-1], start_time, tracks[-1].get("gt")))
+                tracks[-1], start_time, int(datetime.datetime.strptime(
+                    tracks[-1]["gt"], "%Y-%m-%d %H:%M:%S").timestamp())))
 
     return stop_intervals
 
