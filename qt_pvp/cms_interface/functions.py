@@ -79,7 +79,7 @@ def find_stops(tracks):
     stop_intervals = []
     start_time = None
     gt_time = None
-
+    logger.info("Getting interests by stops")
     for track in tracks:
         speed = track.get("sp", 0)
         gt_time = track.get("gt")
