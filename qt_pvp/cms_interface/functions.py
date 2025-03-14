@@ -54,7 +54,15 @@ def find_stops(tracks):
 
     for track in tracks:
         speed = track.get("sp", 0)
-        current_time = track.get("gps_upload_time")
+        gt_time = track.get("gt")
+        if gt_time:
+            try:
+                current_time = int(datetime.datetime.strptime(
+                    gt_time, "%Y-%m-%d %H:%M:%S").timestamp())
+            except ValueError:
+                continue
+        else:
+            continue
 
         if speed <= 50:
             if start_time is None:
