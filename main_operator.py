@@ -211,7 +211,8 @@ class Main:
 
             logger.info(
                 f"{reg_id}: Конвертация {video_path} в {self.output_format}.")
-            converted_video = main_funcs.process_video_file(video_path)
+            converted_video = main_funcs.process_video_file(
+                video_path, final_interest_video_name)
 
             if converted_video:
                 converted_videos.append(converted_video)

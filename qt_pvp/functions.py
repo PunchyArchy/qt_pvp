@@ -385,7 +385,7 @@ def get_video_codec(file_path):
         return None  # Если не удалось определить, возвращаем None
 
 
-def process_video_file(file_path):
+def process_video_file(file_path, output_file_path):
     """
     Обрабатывает видеофайл: проверяет формат и кодек, при необходимости конвертирует.
     """
@@ -414,7 +414,7 @@ def process_video_file(file_path):
 
     # Конвертируем, если нужно
     if need_conversion:
-        output_file = os.path.splitext(file_path)[0] + "_converted.mp4"
-        convert_to_mp4_h264(file_path, output_file)
-        return output_file
+        #output_file = os.path.splitext(file_path)[0] + "_converted.mp4"
+        convert_to_mp4_h264(file_path, output_file_path)
+        return output_file_path
     return file_path
