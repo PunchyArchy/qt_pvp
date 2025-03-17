@@ -115,8 +115,12 @@ class Main:
         for interest in interests:
             logger.info(f"Работаем с интересом {interest}")
             # Загружаем видео
-            await cms_api.download_interest_videos(self.jsession, interest,
-                                                   chanel_id, split)
+            result = await cms_api.download_interest_videos(
+                self.jsession,
+                interest,
+                chanel_id, split)
+            if not result:
+                logger.warning(f"Прерываем работу с регистратором {reg_id}")
 
             # Обрабатываем загруженные файлы
             await self.process_and_upload_videos_async(reg_id, interest)
@@ -182,7 +186,6 @@ class Main:
             os.remove(output_video_path)
         else:
             logger.error(f"{reg_id}: Ошибка загрузки {interest_name}.")
-
 
     async def process_video_and_return_path(self, reg_id, interest,
                                             file_paths):

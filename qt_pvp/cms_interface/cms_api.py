@@ -194,20 +194,22 @@ async def download_interest_videos(jsession, interest, chanel_id,
     start_time_datetime = datetime.datetime.strptime(
         interest["start_time"], "%Y-%m-%d %H:%M:%S")
     download_tasks = []
-    response_json = {}
-    while not "files" in response_json:
-        response = get_video(
-            jsession=jsession,
-            device_id=interest["device_id"],
-            chanel_id=chanel_id,
-            start_time_seconds=interest["beg_sec"],
-            end_time_seconds=interest["end_sec"],
-            year=start_time_datetime.year,
-            month=start_time_datetime.month,
-            day=start_time_datetime.day
-        )
-        response_json = response.json()
-        logger.debug(f"Get video response: {response_json}, {response.status_code}")
+    response = get_video(
+        jsession=jsession,
+        device_id=interest["device_id"],
+        chanel_id=chanel_id,
+        start_time_seconds=interest["beg_sec"],
+        end_time_seconds=interest["end_sec"],
+        year=start_time_datetime.year,
+        month=start_time_datetime.month,
+        day=start_time_datetime.day
+    )
+    response_json = response.json()
+
+    logger.debug(f"Get video response: {response_json}, {response.status_code}")
+    if "files" not in response_json:
+        logger.warning(f"Not files found on chanel_id {chanel_id}")
+        return
     files = response_json["files"]
     for file in files:
         download_task_url = file["DownTaskUrl"]
@@ -217,6 +219,7 @@ async def download_interest_videos(jsession, interest, chanel_id,
         interest["file_paths"].append(file_path)
         download_tasks.append(download_task_url)
     interest["download_tasks"] = download_tasks
+    return True
 
 # for interest in interests:
 #    get_interest_download_path(jsession, interest)
