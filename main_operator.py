@@ -80,6 +80,7 @@ class Main:
         # Получаем информацию о регистраторе
         reg_info = main_funcs.get_reg_info(
             reg_id) or main_funcs.create_new_reg(reg_id)
+        logger.debug(f"Информация о регистраторе {reg_id} - {reg_info}")
         chanel_id = reg_info.get("chanel_id",
                                  0)  # Если нет ID канала, ставим 0
 
