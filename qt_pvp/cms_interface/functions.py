@@ -49,10 +49,9 @@ def analyze_s1(s1_int: int):
 
 
 def get_interest_from_track(track, start_time: str, end_time: str):
-    start_time_datetime = datetime.datetime.strptime(
-        start_time, "%Y-%m-%d %H:%M:%S")
-    end_time_datetime = datetime.datetime.strptime(
-        start_time, "%Y-%m-%d %H:%M:%S")
+    start_time_datetime = datetime.datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S")
+    end_time_datetime = datetime.datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S")
+
     return {
         "name": f"{track['vid']}_"
                 f"{start_time_datetime.year}."
