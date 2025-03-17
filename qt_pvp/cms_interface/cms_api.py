@@ -194,18 +194,20 @@ async def download_interest_videos(jsession, interest, chanel_id,
     start_time_datetime = datetime.datetime.strptime(
         interest["start_time"], "%Y-%m-%d %H:%M:%S")
     download_tasks = []
-    response = get_video(
-        jsession=jsession,
-        device_id=interest["device_id"],
-        chanel_id=chanel_id,
-        start_time_seconds=interest["beg_sec"],
-        end_time_seconds=interest["end_sec"],
-        year=start_time_datetime.year,
-        month=start_time_datetime.month,
-        day=start_time_datetime.day
-    )
-    response_json = response.json()
-    logger.debug(f"J: {response_json}, {response.status_code}")
+    response_json = {}
+    while not "files" in response_json:
+        response = get_video(
+            jsession=jsession,
+            device_id=interest["device_id"],
+            chanel_id=chanel_id,
+            start_time_seconds=interest["beg_sec"],
+            end_time_seconds=interest["end_sec"],
+            year=start_time_datetime.year,
+            month=start_time_datetime.month,
+            day=start_time_datetime.day
+        )
+        response_json = response.json()
+        logger.debug(f"Get video response: {response_json}, {response.status_code}")
     files = response_json["files"]
     for file in files:
         download_task_url = file["DownTaskUrl"]
