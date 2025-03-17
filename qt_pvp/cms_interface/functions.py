@@ -79,9 +79,11 @@ def find_stops(tracks):
     start_time = None
     gt_time = None
     logger.info("Getting interests by stops")
+
     for track in tracks:
         speed = track.get("sp", 0)
         gt_time = track.get("gt")
+
         if gt_time:
             current_time = gt_time
         else:
@@ -94,13 +96,14 @@ def find_stops(tracks):
             if start_time is not None:
                 stop_intervals.append(
                     get_interest_from_track(track, start_time, current_time))
+                start_time = None  # Сбрасываем start_time после добавления
 
     if start_time is not None and gt_time:
         stop_intervals.append(
-            get_interest_from_track(
-                tracks[-1], start_time, gt_time))
+            get_interest_from_track(tracks[-1], start_time, gt_time))
 
-    return stop_intervals
+    # Возвращаем список без первого и последнего элемента
+    return stop_intervals[1:-1] if len(stop_intervals) > 2 else []
 
 
 def find_lifting_switches(tracks):
@@ -144,6 +147,7 @@ def analyze_tracks_get_interests(tracks, by_stops=False,
     # print(tracks)
     if by_stops:
         interests = find_stops(tracks)
+        return interests[1:-1] if len(interests) > 2 else []
     elif by_lifting_limit_switch:
         pass
     elif continuous:
