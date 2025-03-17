@@ -115,11 +115,11 @@ class Main:
         for interest in interests:
             logger.info(f"Работаем с интересом {interest}")
             # Загружаем видео
-            result = await cms_api.download_interest_videos(
+            interest = await cms_api.download_interest_videos(
                 self.jsession,
                 interest,
                 chanel_id, split)
-            if not result:
+            if not interest:
                 logger.warning(f"Прерываем работу с регистратором {reg_id}")
 
             # Обрабатываем загруженные файлы

@@ -193,7 +193,8 @@ async def download_interest_videos(jsession, interest, chanel_id,
     logger.info(f"Загружаем видео...")
     start_time_datetime = datetime.datetime.strptime(
         interest["start_time"], "%Y-%m-%d %H:%M:%S")
-    download_tasks = []
+    #download_tasks = []
+    interest["file_paths"] = []
     response = get_video(
         jsession=jsession,
         device_id=interest["device_id"],
@@ -217,8 +218,8 @@ async def download_interest_videos(jsession, interest, chanel_id,
             jsession=jsession,
             download_task_url=download_task_url)
         interest["file_paths"].append(file_path)
-        download_tasks.append(download_task_url)
-    interest["download_tasks"] = download_tasks
+        #download_tasks.append(download_task_url)
+    #interest["download_tasks"] = download_tasks
     return True
 
 # for interest in interests:
