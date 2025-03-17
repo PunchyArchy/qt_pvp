@@ -220,7 +220,7 @@ async def download_interest_videos(jsession, interest, chanel_id,
         interest["file_paths"].append(file_path)
         #download_tasks.append(download_task_url)
     #interest["download_tasks"] = download_tasks
-    return True
+    return interest
 
 # for interest in interests:
 #    get_interest_download_path(jsession, interest)
