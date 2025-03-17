@@ -44,7 +44,7 @@ class Main:
             self.devices_in_progress.remove(reg_id)
 
     def get_interests(self, reg_id, reg_info, start_time, stop_time):
-        interest_saved = main_funcs.get_interests(reg_info["id"])
+        interest_saved = main_funcs.get_interests(reg_id)
         if not interest_saved:
             tracks = cms_api.get_device_track_all_pages(
                 jsession=self.jsession,
