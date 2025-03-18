@@ -44,25 +44,25 @@ class Main:
             self.devices_in_progress.remove(reg_id)
 
     def get_interests(self, reg_id, reg_info, start_time, stop_time):
-        interest_saved = main_funcs.get_interests(reg_id)
-        if not interest_saved:
-            tracks = cms_api.get_device_track_all_pages(
-                jsession=self.jsession,
-                device_id=reg_id,
-                start_time=start_time,
-                stop_time=stop_time,
-            )
-            interests = cms_api_funcs.analyze_tracks_get_interests(
-                tracks=tracks,
-                by_stops=reg_info["by_stops"],
-                continuous=reg_info["continuous"],
-                by_lifting_limit_switch=reg_info["by_lifting_limit_switch"],
+        #interest_saved = main_funcs.get_interests(reg_id)
+        #if not interest_saved:
+        tracks = cms_api.get_device_track_all_pages(
+            jsession=self.jsession,
+            device_id=reg_id,
+            start_time=start_time,
+            stop_time=stop_time,
+        )
+        interests = cms_api_funcs.analyze_tracks_get_interests(
+            tracks=tracks,
+            by_stops=reg_info["by_stops"],
+            continuous=reg_info["continuous"],
+            by_lifting_limit_switch=reg_info["by_lifting_limit_switch"],
 
-            )
-            main_funcs.save_new_interests(reg_id, interests)
-        else:
-            logger.info("Found saved interests in json")
-            interests = interest_saved
+        )
+        main_funcs.save_new_interests(reg_id, interests)
+        #else:
+        #    logger.info("Found saved interests in json")
+       #     interests = interest_saved
         return interests
 
     async def download_reg_videos(self, reg_id, chanel_id: int = None,
@@ -131,7 +131,7 @@ class Main:
             interests) if interests else end_time
         main_funcs.save_new_reg_last_upload_time(reg_id, last_interest_time)
         logger.info(
-            f"{reg_id} Обновлен `last_upload_time`: {last_interest_time}")
+            f"{reg_id}. Обновлен `last_upload_time`: {last_interest_time}")
 
     async def process_and_upload_videos_async(self, reg_id, interest):
         interest_name = interest["name"]
