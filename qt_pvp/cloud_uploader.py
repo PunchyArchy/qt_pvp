@@ -10,12 +10,6 @@ options = {
     'webdav_password': os.environ.get("webdav_password")
 }
 
-#options = {
-#    'webdav_hostname': "https://webdav.cloud.mail.ru/",
-#    'webdav_login': "qodex.tech@mail.ru",
-#    'webdav_password': "8byRneRA97fy4gknwRQG"
-#}
-
 client = Client(options)
 
 
@@ -124,8 +118,10 @@ def upload_file(file_path, dest_directory, pics=None):
             for chn, photo_path in pics["chanel_pics_before"].items():
                 if photo_path:  # Проверяем, что путь к фото не пустой
                     photo_name = os.path.basename(photo_path)
-                    remote_path = posixpath.join(before_pics_folder, photo_name)
-                    upload_success = upload_file_to_cloud(client, photo_path, remote_path)
+                    remote_path = posixpath.join(before_pics_folder,
+                                                 photo_name)
+                    upload_success = upload_file_to_cloud(client, photo_path,
+                                                          remote_path)
                     if upload_success:
                         delete_local_file(photo_path)
         # Обрабатываем after_pics
@@ -134,7 +130,8 @@ def upload_file(file_path, dest_directory, pics=None):
                 if photo_path:  # Проверяем, что путь к фото не пустой
                     photo_name = os.path.basename(photo_path)
                     remote_path = posixpath.join(after_pics_folder, photo_name)
-                    upload_success = upload_file_to_cloud(client, photo_path, remote_path)
+                    upload_success = upload_file_to_cloud(client, photo_path,
+                                                          remote_path)
                     if upload_success:
                         delete_local_file(photo_path)
     except Exception as e:
