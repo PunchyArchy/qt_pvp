@@ -121,6 +121,7 @@ class Main:
                 chanel_id, split)
             if not interest:
                 logger.warning(f"Прерываем работу с регистратором {reg_id}")
+                return
 
             # Обрабатываем загруженные файлы
             await self.process_and_upload_videos_async(reg_id, interest)
