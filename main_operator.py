@@ -120,10 +120,10 @@ class Main:
                 interest,
                 chanel_id, split)
             if not interest:
-                logger.warning(f"Прерываем работу с регистратором {reg_id}")
-                return
+                logger.warning(
+                    f"{reg_id}. Не найдены видео на канале {chanel_id}")
+                continue
 
-            # Обрабатываем загруженные файлы
             await self.process_and_upload_videos_async(reg_id, interest)
 
         # Обновляем `last_upload_time`
