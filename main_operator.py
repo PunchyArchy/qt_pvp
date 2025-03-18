@@ -59,7 +59,7 @@ class Main:
             by_lifting_limit_switch=reg_info["by_lifting_limit_switch"],
 
         )
-        main_funcs.save_new_interests(reg_id, interests)
+        #main_funcs.save_new_interests(reg_id, interests)
         #else:
         #    logger.info("Found saved interests in json")
        #     interests = interest_saved
