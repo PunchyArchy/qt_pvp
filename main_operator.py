@@ -154,7 +154,7 @@ class Main:
             )
             alarm_pictures = await alarm_pictures_task
             print(alarm_pictures)
-            return
+            raise ZeroDivisionError
         else:
             alarm_pictures = None
         video_task = asyncio.create_task(
