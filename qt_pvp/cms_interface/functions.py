@@ -7,11 +7,9 @@ import asyncio
 
 
 def int_to_32bit_binary(number):
-    # Переводим число в двоичную строку без префикса '0b'
-    binary_str = bin(number)[2:]
-    # Добавляем нули слева, чтобы длина строки стала 32 символа
-    padded_binary_str = binary_str.zfill(32)
-    bits = [int(bit) for bit in padded_binary_str]
+    # Преобразуем число в 32-битное представление, учитывая знак
+    binary_str = format(number & 0xFFFFFFFF, '032b')
+    bits = [int(bit) for bit in binary_str]
     bits.reverse()
     return bits
 
