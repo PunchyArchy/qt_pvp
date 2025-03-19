@@ -294,6 +294,7 @@ class Main:
                 chanel_id=0,
                 fileattr=1
             ).json()
+            print("response before", response_before)
             chanel_pics_before = await cms_api.fetch_photo_url(
                 response_before["files"], channels)
             # Получаем картинки после события
@@ -308,6 +309,7 @@ class Main:
                 chanel_id=0,
                 fileattr=1
             )
+            print("response after", response_after)
             chanel_pics_after = await cms_api.fetch_photo_url(
                 response_after["files"], channels)
             logger.debug("Pictures retrieved successfully")
