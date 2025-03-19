@@ -63,43 +63,6 @@ def split_time_range_to_dicts(start_time, end_time, interval):
     return result
 
 
-def convert_and_concatenate_videos(input_dir, output_format='mp4'):
-    # Проверка существования входящей директории
-    logger.info(f"Начало обработки видео (конвертация и конкатенация)...")
-    if not os.path.exists(input_dir):
-        logger.error(f"Директория {input_dir} не найдена!")
-    # Получение списка всех поддиректорий в input_dir
-    sub_dirs = [d for d in os.listdir(input_dir) if
-                os.path.isdir(os.path.join(input_dir, d))]
-    logger.debug(f"Получен список поддиректорий - {sub_dirs}")
-    for subdir in sub_dirs:
-        logger.debug(f"Работаем с {subdir}")
-        # Полный путь до поддиректории
-        subdir_path = os.path.join(input_dir, subdir)
-        # Получение списка всех файлов в поддиректории
-        video_files = [f for f in os.listdir(subdir_path) if
-                       f.endswith('.grec')]
-        # Сортируем файлы по имени
-        video_files.sort()
-        # Преобразование каждого файла в MP4
-        converted_files = []
-        for video_file in video_files:
-            converted_file_path = convert_video_file(video_file)
-            converted_files.append(converted_file_path)
-        logger.debug("Успешно сконвертированы.")
-        # Объединение всех MP4 файлов в один
-        concatenated_filename = os.path.join(subdir_path,
-                                             f'{subdir}.{output_format}')
-        concatenated_filename = concatenate_videos(
-            converted_files=converted_files,
-            output_abs_name=concatenated_filename)
-        # Удаляем временные файлы
-        # os.remove(concat_list_path)
-        for file in converted_files:
-            os.remove(file)
-    # r#eturn {"output_path": concatenated_filename}
-
-
 def concatenate_videos(converted_files, output_abs_name):
     concat_list_path = os.path.join(os.path.dirname(output_abs_name),
                                     'concat_list.txt')

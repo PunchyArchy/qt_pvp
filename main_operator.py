@@ -231,7 +231,8 @@ class Main:
             # Удаляем временные файлы после объединения
             shutil.rmtree(interest_temp_folder)
             for file in converted_videos:
-                os.remove(file)
+                if os.path.exists(file):
+                    os.remove(file)
 
         elif len(converted_videos) == 1:
             output_video_path = converted_videos[
