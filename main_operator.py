@@ -140,7 +140,6 @@ class Main:
             logger.warning(
                 f"{reg_id}: Нет видеофайлов для {interest_name}. Пропускаем.")
             return
-        '''
         if settings.config.getboolean("General", "pics_before_after"):
             # Запускаем скачивание фото и обработку видео ПАРАЛЛЕЛЬНО
             alarm_pictures_task = asyncio.create_task(
@@ -153,19 +152,15 @@ class Main:
                     interest["day"]
                 )
             )
-        '''
+            alarm_pictures = await alarm_pictures_task
+        else:
+            alarm_pictures = None
         video_task = asyncio.create_task(
             self.process_video_and_return_path(reg_id, interest,
                                                file_paths)
         )
 
         # Дожидаемся завершения обеих задач
-        '''
-        if settings.config.getboolean("General", "pics_before_after"):
-            alarm_pictures = await alarm_pictures_task
-        else:
-            alarm_pictures = None
-        '''
         output_video_path = await video_task
 
         if not output_video_path:
@@ -178,7 +173,7 @@ class Main:
             f"{reg_id}: Загружаем {interest_name} в облако с фото тревоги.")
         upload_status = await asyncio.to_thread(
             cloud_uploader.upload_file, output_video_path,
-            settings.CLOUD_PATH, pics=None
+            settings.CLOUD_PATH, pics=alarm_pictures
         )
 
         if upload_status:
