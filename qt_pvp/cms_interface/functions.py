@@ -108,37 +108,54 @@ def find_stops(tracks):
     return stop_intervals[1:-1] if len(stop_intervals) > 2 else []
 
 
-def find_lifting_switches(tracks):
-    stop_intervals = []
+def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
+    loading_intervals = []
     start_time = None
-    gt_time = None
-    logger.info("Getting interests by stops")
+    last_alarm_time = None
+
     for track in tracks:
-        speed = track.get("sp", 0)
+        speed = track.get("sp", 0)  # Скорость машины
         s1_analyze = analyze_s1(track["s1"])
         switch = s1_analyze["io3"] or s1_analyze["io4"]
+        current_time = datetime.datetime.strptime(track.get("gt"),
+                                                  "%Y-%m-%d %H:%M:%S")  # Время события
+
+        # Если сработал концевик (alarm 3 или alarm 4)
         if switch:
-            pass
-        gt_time = track.get("gt")
-        if gt_time:
-            current_time = gt_time
-        else:
-            continue
-
-        if speed <= 50:
             if start_time is None:
-                start_time = current_time
-        else:
-            if start_time is not None:
-                stop_intervals.append(
-                    get_interest_from_track(track, start_time, current_time))
+                # Начало - 30 секунд до первой сработки
+                start_time = current_time - datetime.timedelta(
+                    seconds=sec_before)
 
-    if start_time is not None and gt_time:
-        stop_intervals.append(
+            # Запоминаем последнюю сработку концевика
+            last_alarm_time = current_time
+
+        # Если машина поехала (speed > 0) и ранее была фиксация загрузки
+        if speed > 0 and start_time:
+            # Завершаем текущий интервал загрузки
+            end_time = last_alarm_time + datetime.timedelta(seconds=sec_after)
+            loading_intervals.append(
+                get_interest_from_track(
+                    track,
+                    start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                    end_time.strftime("%Y-%m-%d %H:%M:%S"))
+            )
+
+            # Сбрасываем переменные для нового интервала
+            start_time = None
+            last_alarm_time = None
+
+    # Добавляем последний интервал, если машина так и не поехала
+    if start_time and last_alarm_time:
+        end_time = last_alarm_time + datetime.timedelta(seconds=30)
+        loading_intervals.append(
             get_interest_from_track(
-                tracks[-1], start_time, gt_time))
+                tracks[-1],
+                start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                end_time.strftime("%Y-%m-%d %H:%M:%S"))
+        )
 
-    return stop_intervals
+    return loading_intervals
 
 
 def analyze_tracks_get_interests(tracks, by_stops=False,
@@ -151,7 +168,8 @@ def analyze_tracks_get_interests(tracks, by_stops=False,
         interests = find_stops(tracks)
         return interests[1:-1] if len(interests) > 2 else []
     elif by_lifting_limit_switch:
-        pass
+        interests = find_by_lifting_switches(tracks)
+        return interests
     elif continuous:
         interests = get_interest_from_track(
             tracks[-1], tracks[0]["gt"], tracks[-1]["gt"])
