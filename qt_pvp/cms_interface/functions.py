@@ -112,7 +112,7 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
     loading_intervals = []
     start_time = None
     last_alarm_time = None
-
+    logger.info("Анализ треков на остановку по концевикам подъемного механизма")
     for track in tracks:
         speed = track.get("sp", 0)  # Скорость машины
         s1_analyze = analyze_s1(track["s1"])
