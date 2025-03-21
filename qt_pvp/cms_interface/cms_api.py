@@ -6,6 +6,7 @@ import requests
 import aiohttp
 import asyncio
 import time
+import cv2
 
 
 @functions.cms_data_get_decorator()
@@ -193,7 +194,6 @@ async def download_interest_videos(jsession, interest, chanel_id,
     logger.info(f"Загружаем видео...")
     start_time_datetime = datetime.datetime.strptime(
         interest["start_time"], "%Y-%m-%d %H:%M:%S")
-    #download_tasks = []
     interest["file_paths"] = []
     response = get_video(
         jsession=jsession,
@@ -207,7 +207,8 @@ async def download_interest_videos(jsession, interest, chanel_id,
     )
     response_json = response.json()
 
-    logger.debug(f"Get video response: {response_json}, {response.status_code}")
+    logger.debug(
+        f"Get video response: {response_json}, {response.status_code}")
     if "files" not in response_json:
         logger.warning(f"Not files found on chanel_id {chanel_id}")
         return
@@ -218,10 +219,79 @@ async def download_interest_videos(jsession, interest, chanel_id,
             jsession=jsession,
             download_task_url=download_task_url)
         interest["file_paths"].append(file_path)
-        #download_tasks.append(download_task_url)
-    #interest["download_tasks"] = download_tasks
     return interest
 
+
+async def get_frames(jsession, reg_id: str,
+                     year: int, month: int, day: int,
+                     start_sec: int, end_sec: int):
+    channels = [0, 1, 2, 3, 4]
+    frames = []
+    for channel_id in channels:
+        videos_path = await download_video(jsession=jsession, reg_id=reg_id,
+                                           channel_id=channel_id, year=year,
+                                           month=month, day=day,
+                                           start_sec=start_sec,
+                                           end_sec=end_sec)
+        if not videos_path:
+            continue
+        video_path = videos_path[0]
+        frame_path = extract_first_frame(video_path)
+        frames.append(frame_path)
+    return frames
+
+
+def extract_first_frame(video_path: str,
+                        output_image_path: str = settings.FRAMES_TEMP_FOLDER):
+    cap = cv2.VideoCapture(video_path)
+
+    if not cap.isOpened():
+        logger.error(f"Не удалось открыть видео: {video_path}")
+        return False
+
+    success, frame = cap.read()
+    if success:
+        cv2.imwrite(output_image_path, frame)
+        logger.info(f"Кадр успешно сохранён в: {output_image_path}")
+        return output_image_path
+    else:
+        logger.warning("Не удалось прочитать кадр из видео.")
+        return False
+
+
+async def download_video(jsession, reg_id: str, channel_id: int,
+                         year: int, month: int, day: int,
+                         start_sec: int, end_sec: int):
+    logger.info(
+        f"{reg_id}. Загружаем видео {year}.{month}.{day} "
+        f"c {start_sec} до {end_sec} (секунды). "
+        f"Канал {channel_id}")
+    file_paths = []
+    response = get_video(
+        jsession=jsession,
+        device_id=reg_id,
+        chanel_id=channel_id,
+        start_time_seconds=start_sec,
+        end_time_seconds=end_sec,
+        year=year,
+        month=month,
+        day=day
+    )
+    response_json = response.json()
+
+    logger.debug(
+        f"Get video response: {response_json}, {response.status_code}")
+    if "files" not in response_json:
+        logger.warning(f"Not files found on chanel_id {channel_id}")
+        return
+    files = response_json["files"]
+    for file in files:
+        download_task_url = file["DownTaskUrl"]
+        file_path = await wait_and_get_dwn_url(
+            jsession=jsession,
+            download_task_url=download_task_url)
+        file_paths.append(file_path)
+    return file_paths
 # for interest in interests:
 #    get_interest_download_path(jsession, interest)
 

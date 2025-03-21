@@ -46,11 +46,17 @@ def analyze_s1(s1_int: int):
     }
 
 
-def get_interest_from_track(track, start_time: str, end_time: str):
+def get_interest_from_track(track, start_time: str, end_time: str,
+                            photo_before_timestamp: str = None,
+                            photo_after_timestamp: str = None):
     start_time_datetime = datetime.datetime.strptime(start_time,
                                                      "%Y-%m-%d %H:%M:%S")
     end_time_datetime = datetime.datetime.strptime(end_time,
                                                    "%Y-%m-%d %H:%M:%S")
+    photo_before_datetime = datetime.datetime.strptime(photo_before_timestamp,
+                                                       "%Y-%m-%d %H:%M:%S")
+    photo_after_datetime = datetime.datetime.strptime(photo_after_timestamp,
+                                                      "%Y-%m-%d %H:%M:%S")
 
     return {
         "name": f"{track['vid']}_"
@@ -71,6 +77,10 @@ def get_interest_from_track(track, start_time: str, end_time: str):
         "start_time": start_time,
         "end_time": end_time,
         "device_id": track["vid"],
+        "photo_before_timestamp": photo_before_timestamp,
+        "photo_after_timestamp": photo_after_timestamp,
+        "photo_before_sec": seconds_since_midnight(photo_before_datetime),
+        "photo_after_sec": seconds_since_midnight(photo_after_datetime),
     }
 
 
@@ -108,9 +118,101 @@ def find_stops(tracks):
 
 def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
     loading_intervals = []
+    i = 0
+    while i < len(tracks):
+        track = tracks[i]
+        s1 = track.get("s1")
+        timestamp = track.get("gt")
+
+        # Убедимся, что s1 — это целое число
+        try:
+            s1_int = int(s1)
+        except (ValueError, TypeError):
+            i += 1
+            continue
+
+        # Получим 32-битный список битов
+        bits = list(bin(s1_int & 0xFFFFFFFF)[2:].zfill(32))
+        bits.reverse()
+
+        # Если сработал концевик (bit 3 или 4)
+        if bits[22] == '1' or bits[23] == '1':
+            # === ВРЕМЯ ЗА 30 СЕК ДО ===
+            current_dt = datetime.datetime.strptime(timestamp,
+                                                    "%Y-%m-%d %H:%M:%S")
+            time_30_before_dt = current_dt - datetime.timedelta(
+                seconds=sec_before)
+
+            # === НАХОДИМ ВРЕМЯ ДО (по остановке) ===
+            time_before = None
+            j = i
+            while j >= 0:
+                spd = tracks[j].get("sp") or 0
+                if spd <= 10:
+                    time_before = tracks[j].get("gt")
+                else:
+                    break
+                j -= 1
+
+            # === НАХОДИМ ВРЕМЯ ПОСЛЕ ===
+            # Найдём последнюю сработку концевика
+            lifting_end_idx = i
+            while lifting_end_idx + 1 < len(tracks):
+                next_track = tracks[lifting_end_idx + 1]
+                next_s1 = next_track.get("s1")
+                try:
+                    next_s1_int = int(next_s1)
+                except (ValueError, TypeError):
+                    break
+
+                next_bits = list(bin(next_s1_int & 0xFFFFFFFF)[2:].zfill(32))
+                next_bits.reverse()
+                if next_bits[22] == '1' or next_bits[23] == '1':
+                    lifting_end_idx += 1
+                else:
+                    break
+
+            time_after = None
+            k = lifting_end_idx + 1
+            while k < len(tracks):
+                spd = tracks[k].get("sp") or 0
+                if spd > 10:
+                    if k > 0:
+                        time_after = tracks[k - 1].get("timestamp")
+                    break
+                k += 1
+
+            # === ВРЕМЯ +30 сек ПОСЛЕ ===
+            last_alarm_dt = datetime.datetime.strptime(
+                tracks[lifting_end_idx].get("timestamp"), "%Y-%m-%d %H:%M:%S")
+            time_30_after_dt = last_alarm_dt + datetime.timedelta(
+                seconds=sec_after)
+            time_30_after = time_30_after_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+            if time_before and time_after:
+                loading_intervals.append(
+                    get_interest_from_track(
+                        tracks[-1],
+                        start_time=time_30_before_dt.strftime(
+                            "%Y-%m-%d %H:%M:%S"),
+                        end_time=time_after,
+                        photo_before_timestamp=time_30_before_dt.strftime(
+                            "%Y-%m-%d %H:%M:%S"),
+                        photo_after_timestamp=time_30_after))
+
+            i = lifting_end_idx + 1
+        else:
+            i += 1
+
+    return loading_intervals
+
+
+def find_by_lifting_switches_depr(tracks, sec_before=30, sec_after=30):
+    loading_intervals = []
     start_time = None
     last_alarm_time = None
-    logger.info("Анализ треков на остановку по концевикам подъемного механизма")
+    logger.info(
+        "Анализ треков на остановку по концевикам подъемного механизма")
     for track in tracks:
         speed = track.get("sp", 0)  # Скорость машины
         s1_analyze = analyze_s1(track["s1"])

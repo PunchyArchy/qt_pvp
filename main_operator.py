@@ -126,6 +126,21 @@ class Main:
 
             await self.process_and_upload_videos_async(reg_id, interest)
 
+            if settings.config.getboolean("General", "pics_before_after"):
+                # Запускаем скачивание фото и обработку видео ПАРАЛЛЕЛЬНО
+                frames_before = await cms_api.get_frames(
+                    jsession=self.jsession, reg_id=reg_id,
+                    year=interest["year"], month=interest["month"],
+                    day=interest["day"],
+                    start_sec=interest["photo_before_sec"],
+                    end_sec=interest["photo_before_sec"] + 1)
+                frames_after = await cms_api.get_frames(
+                    jsession=self.jsession, reg_id=reg_id,
+                    year=interest["year"], month=interest["month"],
+                    day=interest["day"],
+                    start_sec=interest["photo_after_sec"],
+                    end_sec=interest["photo_after_sec"] + 1)
+
         # Обновляем `last_upload_time`
         last_interest_time = self.get_last_interest_datetime(
             interests) if interests else end_time
@@ -140,23 +155,7 @@ class Main:
             logger.warning(
                 f"{reg_id}: Нет видеофайлов для {interest_name}. Пропускаем.")
             return
-        if settings.config.getboolean("General", "pics_before_after"):
-            # Запускаем скачивание фото и обработку видео ПАРАЛЛЕЛЬНО
-            alarm_pictures_task = asyncio.create_task(
-                self.get_alarm_pictures_async(
-                    reg_id,
-                    interest["beg_sec"],
-                    interest["end_sec"],
-                    interest["year"],
-                    interest["month"],
-                    interest["day"]
-                )
-            )
-            alarm_pictures = await alarm_pictures_task
-            #print(alarm_pictures)
-            #raise ZeroDivisionError
-        else:
-            alarm_pictures = None
+
         video_task = asyncio.create_task(
             self.process_video_and_return_path(reg_id, interest,
                                                file_paths)
@@ -175,7 +174,7 @@ class Main:
             f"{reg_id}: Загружаем {interest_name} в облако с фото тревоги.")
         upload_status = await asyncio.to_thread(
             cloud_uploader.upload_file, output_video_path,
-            settings.CLOUD_PATH, pics=alarm_pictures
+            settings.CLOUD_PATH
         )
 
         if upload_status:
@@ -242,87 +241,6 @@ class Main:
             return None  # Возвращаем None, если видео не обработано
 
         return final_interest_video_name
-
-    def get_alarm_pictures(self, reg_id, beg_sec, end_sec, year: int,
-                           month: int, day: int, channels: list = None):
-        # Синхронная обертка для асинхронного метода
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-
-        if loop and loop.is_running():
-            # Если event loop уже запущен, используем его
-            return loop.run_until_complete(
-                self.get_alarm_pictures_async(reg_id, beg_sec, end_sec, year,
-                                              month, day, channels))
-        else:
-            # Если event loop не запущен, создаем новый
-            return asyncio.run(
-                self.get_alarm_pictures_async(reg_id, beg_sec, end_sec, year,
-                                              month, day, channels))
-
-    async def get_alarm_pictures_async(self, reg_id, beg_sec, end_sec,
-                                       year: int,
-                                       month: int, day: int,
-                                       channels: list = None):
-        """
-        Получает картинки до и после события для заданных каналов.
-
-        :param reg_id: ID регистратора.
-        :param beg_sec: Начало временного интервала (в секундах).
-        :param end_sec: Конец временного интервала (в секундах).
-        :param year: Год.
-        :param month: Месяц.
-        :param day: День.
-        :param channels: Список каналов. Если не указан, используются (0, 1, 2, 3).
-        :return: Словарь с картинками до и после события.
-        """
-        logger.debug("Getting pictures")
-        if not channels:
-            channels = (0, 1, 2, 3)
-        try:
-            # Получаем картинки до события
-            response_before = cms_api.get_video(
-                self.jsession,
-                device_id=reg_id,
-                start_time_seconds=beg_sec - 10,
-                end_time_seconds=beg_sec + 10,
-                year=year,
-                month=month,
-                day=day,
-                chanel_id=0,
-                fileattr=1
-            ).json()
-            print("response before", response_before)
-            chanel_pics_before = await cms_api.fetch_photo_url(
-                response_before["files"], channels)
-            # Получаем картинки после события
-            response_after = cms_api.get_video(
-                self.jsession,
-                device_id=reg_id,
-                start_time_seconds=end_sec - 10,
-                end_time_seconds=end_sec + 10,
-                year=year,
-                month=month,
-                day=day,
-                chanel_id=0,
-                fileattr=1
-            )
-            print("response after", response_after)
-            chanel_pics_after = await cms_api.fetch_photo_url(
-                response_after["files"], channels)
-            logger.debug("Pictures retrieved successfully")
-            return {
-                "chanel_pics_before": chanel_pics_before,
-                "chanel_pics_after": chanel_pics_after
-            }
-        except Exception as e:
-            logger.error(f"Error while getting pictures: {e}")
-            return {
-                "chanel_pics_before": {},
-                "chanel_pics_after": {}
-            }
 
     def get_last_interest_datetime(self, interests):
         last_interest = interests[-1]
