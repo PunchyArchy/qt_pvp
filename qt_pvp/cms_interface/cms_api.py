@@ -249,6 +249,7 @@ def extract_first_frame(video_path: str,
         logger.error(f"Не удалось открыть видео: {video_path}")
         return False
 
+    logger.debug(f"Пытаемся сохранить кадр в {output_image_path}")
     success, frame = cap.read()
     if success:
         cv2.imwrite(output_image_path, frame)
