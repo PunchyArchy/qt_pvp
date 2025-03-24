@@ -137,11 +137,11 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
 
         # Если сработал концевик (bit 3 или 4)
         if bits[22] == '1' or bits[23] == '1':
+            switch_events = []
+
             # === ВРЕМЯ ЗА 30 СЕК ДО ===
-            current_dt = datetime.datetime.strptime(timestamp,
-                                                    "%Y-%m-%d %H:%M:%S")
-            time_30_before_dt = current_dt - datetime.timedelta(
-                seconds=sec_before)
+            current_dt = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+            time_30_before_dt = current_dt - datetime.timedelta(seconds=sec_before)
 
             # === НАХОДИМ ВРЕМЯ ДО (по остановке) ===
             time_before = None
@@ -154,9 +154,10 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
                     break
                 j -= 1
 
-            # === НАХОДИМ ВРЕМЯ ПОСЛЕ ===
-            # Найдём последнюю сработку концевика
+            # === НАХОДИМ ПОСЛЕДНЕЕ СРАБАТЫВАНИЕ КОНЦЕВИКА ===
             lifting_end_idx = i
+            last_switch_index = i
+
             while lifting_end_idx + 1 < len(tracks):
                 next_track = tracks[lifting_end_idx + 1]
                 next_s1 = next_track.get("s1")
@@ -167,13 +168,32 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
 
                 next_bits = list(bin(next_s1_int & 0xFFFFFFFF)[2:].zfill(32))
                 next_bits.reverse()
+
                 if next_bits[22] == '1' or next_bits[23] == '1':
                     lifting_end_idx += 1
+                    sw_time = next_track.get("gt")
+                    if next_bits[22] == '1':
+                        switch_events.append({"datetime": sw_time, "switch": 22})
+                    if next_bits[23] == '1':
+                        switch_events.append({"datetime": sw_time, "switch": 23})
+                    last_switch_index = lifting_end_idx
                 else:
                     break
 
+            # Также добавим начальное срабатывание
+            if bits[22] == '1':
+                switch_events.insert(0, {"datetime": timestamp, "switch": 22})
+            if bits[23] == '1':
+                switch_events.insert(0, {"datetime": timestamp, "switch": 23})
+
+            # === ВРЕМЯ +30 сек ПОСЛЕ последнего срабатывания, пока машина стоит ===
+            last_alarm_dt = datetime.datetime.strptime(tracks[last_switch_index].get("gt"), "%Y-%m-%d %H:%M:%S")
+            time_30_after_dt = last_alarm_dt + datetime.timedelta(seconds=sec_after)
+            time_30_after = time_30_after_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+            # === НАХОДИМ ВРЕМЯ ПОСЛЕ (по движению) ===
             time_after = None
-            k = lifting_end_idx + 1
+            k = last_switch_index + 1
             while k < len(tracks):
                 spd = tracks[k].get("sp") or 0
                 if spd > 10:
@@ -182,28 +202,23 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
                     break
                 k += 1
 
-            # === ВРЕМЯ +30 сек ПОСЛЕ ===
-            last_alarm_dt = datetime.datetime.strptime(
-                tracks[lifting_end_idx].get("gt"), "%Y-%m-%d %H:%M:%S")
-            time_30_after_dt = last_alarm_dt + datetime.timedelta(
-                seconds=sec_after)
-            time_30_after = time_30_after_dt.strftime("%Y-%m-%d %H:%M:%S")
-
             if time_before and time_after:
-                loading_intervals.append(
-                    get_interest_from_track(
-                        tracks[-1],
-                        start_time=time_30_before_dt.strftime(
-                            "%Y-%m-%d %H:%M:%S"),
-                        end_time=time_30_after,
-                        photo_before_timestamp=time_before,
-                        photo_after_timestamp=time_after))
+                interval = get_interest_from_track(
+                    tracks[-1],
+                    start_time=time_30_before_dt.strftime("%Y-%m-%d %H:%M:%S"),
+                    end_time=time_30_after,
+                    photo_before_timestamp=time_before,
+                    photo_after_timestamp=time_after
+                )
+                interval["switch_events"] = switch_events
+                loading_intervals.append(interval)
 
             i = lifting_end_idx + 1
         else:
             i += 1
 
     return loading_intervals
+
 
 
 def find_by_lifting_switches_depr(tracks, sec_before=30, sec_after=30):
