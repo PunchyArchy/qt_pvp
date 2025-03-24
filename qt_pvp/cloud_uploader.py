@@ -37,13 +37,11 @@ def create_folder_if_not_exists(client, folder_path):
         client.mkdir(folder_path)
 
 
-def upload_file_to_cloud(client, local_file_path, remote_folder_path):
+def upload_file_to_cloud(client, local_file_path, remote_path):
     """
     Загрузка файла на WebDAV сервер в указанную папку.
     """
     try:
-        remote_path = posixpath.join(remote_folder_path,
-                                     os.path.basename(local_file_path))
         client.upload_sync(remote_path=remote_path,
                            local_path=local_file_path)
         print(f"Файл {local_file_path} успешно загружен.")
@@ -111,8 +109,9 @@ def upload_file(interest_name, file_path, dest_directory):
     create_folder_if_not_exists(client, date_folder_path)
     create_folder_if_not_exists(client, interest_folder_path)
 
-    success = upload_file_to_cloud(client, file_path, interest_folder_path)
-    # Загружаем фотографии из словаря pics
+    remote_path = posixpath.join(interest_folder_path,
+                                 os.path.basename(file_path))
+    success = upload_file_to_cloud(client, file_path, remote_path)
     return success
 
 
