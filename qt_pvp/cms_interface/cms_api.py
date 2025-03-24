@@ -235,6 +235,7 @@ async def get_frames(jsession, reg_id: str,
                                            month=month, day=day,
                                            start_sec=start_sec,
                                            end_sec=end_sec)
+        logger.debug(f"Chanel id {channel_id} - {videos_path}")
         if not videos_path:
             continue
         video_path = videos_path[0]

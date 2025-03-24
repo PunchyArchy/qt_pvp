@@ -128,12 +128,14 @@ class Main:
 
             if settings.config.getboolean("General", "pics_before_after"):
                 # Запускаем скачивание фото и обработку видео ПАРАЛЛЕЛЬНО
+                logger.debug("Получаем кадры ДО и ПОСЛЕ загрузки")
                 frames_before = await cms_api.get_frames(
                     jsession=self.jsession, reg_id=reg_id,
                     year=interest["year"], month=interest["month"],
                     day=interest["day"],
                     start_sec=interest["photo_before_sec"],
                     end_sec=interest["photo_before_sec"] + 1)
+                logger.debug(f"Кадры до: {frames_before}")
                 frames_after = await cms_api.get_frames(
                     jsession=self.jsession, reg_id=reg_id,
                     year=interest["year"], month=interest["month"],
