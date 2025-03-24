@@ -158,7 +158,6 @@ class Main:
                         logger.info(
                             f"{reg_id}: Загрузка прошла успешно. Удаляем локальные фото-файлы ({frame}).")
                         os.remove(frame)
-
                 cloud_uploader.upload_dict_as_json_to_cloud(
                     data=interest["switch_events"],
                     remote_folder_path=interest["cloud_folder"])

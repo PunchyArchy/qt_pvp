@@ -1,4 +1,5 @@
 from webdav3.client import Client
+from qt_pvp.logger import logger
 from qt_pvp import settings
 import posixpath
 import json
@@ -137,6 +138,7 @@ def upload_dict_as_json_to_cloud(data: dict, remote_folder_path: str,
     :param remote_folder_path: Папка в облаке для загрузки (WebDAV)
     :param filename: Имя файла (по умолчанию — data.json)
     """
+    logger.info(f"Выгрузка отчета в {remote_folder_path}")
     try:
         # Уникальное имя временного файла
         local_filename = f"{uuid.uuid4().hex}.json"
@@ -160,7 +162,7 @@ def upload_dict_as_json_to_cloud(data: dict, remote_folder_path: str,
         # Удаляем локальный файл после загрузки
         if success:
             delete_local_file(local_file_path)
-
+        logger.info("Отчет успешно выгружен")
         return success
 
     except Exception as e:
