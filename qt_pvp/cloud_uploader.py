@@ -61,28 +61,6 @@ def delete_local_file(local_file_path):
         print(f"Не удалось удалить локальный файл {local_file_path}: {e}")
 
 
-def main(local_directory, dest_directory):
-    for file in os.listdir(local_directory):
-        if not file.endswith('.mp4'):
-            continue  # Пропускаем файлы, которые не являются видеофайлами
-        full_file_path = os.path.join(local_directory, file)
-        # Парсим имя файла
-        registr_name, date_str = parse_filename(file)
-        # Формируем пути на удаленном сервере
-        registr_folder = posixpath.join(dest_directory, registr_name)
-        date_folder = f'{date_str}'
-        remote_folder_path = posixpath.join(registr_folder, date_folder)
-        # Проверяем и создаем папки, если их нет
-        create_folder_if_not_exists(client, registr_folder)
-        create_folder_if_not_exists(client, remote_folder_path)
-        # Загружаем файл на сервер
-        success = upload_file_to_cloud(
-            client, full_file_path, remote_folder_path)
-        if success:
-            # Удаляем локальную копию файла
-            delete_local_file(full_file_path)
-
-
 def get_interest_folder_path(interest_name, dest_directory):
     registr_name, date_str = parse_filename(interest_name)
     # Формируем пути на удаленном сервере
@@ -90,7 +68,7 @@ def get_interest_folder_path(interest_name, dest_directory):
     date_folder = f'{date_str}'
     date_folder_path = posixpath.join(registr_folder, date_folder)
     interest_folder_path = posixpath.join(date_folder_path, interest_name)
-    return registr_folder, date_folder, interest_folder_path
+    return registr_folder, date_folder_path, interest_folder_path
 
 
 def upload_file(interest_name, file_path, dest_directory):
