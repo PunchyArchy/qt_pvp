@@ -2,3 +2,4 @@ requests
 webdavclient3
 aiohttp
 ffmpeg-python
+opencv-python

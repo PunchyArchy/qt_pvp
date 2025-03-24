@@ -178,13 +178,13 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
                 spd = tracks[k].get("sp") or 0
                 if spd > 10:
                     if k > 0:
-                        time_after = tracks[k - 1].get("timestamp")
+                        time_after = tracks[k - 1].get("gt")
                     break
                 k += 1
 
             # === ВРЕМЯ +30 сек ПОСЛЕ ===
             last_alarm_dt = datetime.datetime.strptime(
-                tracks[lifting_end_idx].get("timestamp"), "%Y-%m-%d %H:%M:%S")
+                tracks[lifting_end_idx].get("gt"), "%Y-%m-%d %H:%M:%S")
             time_30_after_dt = last_alarm_dt + datetime.timedelta(
                 seconds=sec_after)
             time_30_after = time_30_after_dt.strftime("%Y-%m-%d %H:%M:%S")
@@ -274,7 +274,7 @@ def analyze_tracks_get_interests(tracks, by_stops=False,
         interests = get_interest_from_track(
             tracks[-1], tracks[0]["gt"], tracks[-1]["gt"])
     logger.debug(f"Get interests: {interests}")
-    # raise ZeroDivisionError
+    raise ZeroDivisionError
     return interests
 
 
