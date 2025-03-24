@@ -124,26 +124,22 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
         s1 = track.get("s1")
         timestamp = track.get("gt")
 
-        # Убедимся, что s1 — это целое число
         try:
             s1_int = int(s1)
         except (ValueError, TypeError):
             i += 1
             continue
 
-        # Получим 32-битный список битов
         bits = list(bin(s1_int & 0xFFFFFFFF)[2:].zfill(32))
         bits.reverse()
 
-        # Если сработал концевик (bit 3 или 4)
+        # Если найдено срабатывание концевика
         if bits[22] == '1' or bits[23] == '1':
             switch_events = []
-
-            # === ВРЕМЯ ЗА 30 СЕК ДО ===
             current_dt = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
             time_30_before_dt = current_dt - datetime.timedelta(seconds=sec_before)
 
-            # === НАХОДИМ ВРЕМЯ ДО (по остановке) ===
+            # Ищем момент остановки до первого срабатывания
             time_before = None
             j = i
             while j >= 0:
@@ -154,13 +150,20 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
                     break
                 j -= 1
 
-            # === НАХОДИМ ПОСЛЕДНЕЕ СРАБАТЫВАНИЕ КОНЦЕВИКА ===
             lifting_end_idx = i
             last_switch_index = i
 
+            # Добавляем первое срабатывание
+            if bits[22] == '1':
+                switch_events.append({"datetime": timestamp, "switch": 22})
+            if bits[23] == '1':
+                switch_events.append({"datetime": timestamp, "switch": 23})
+
+            # Продолжаем искать последующие срабатывания, пока машина стоит
             while lifting_end_idx + 1 < len(tracks):
                 next_track = tracks[lifting_end_idx + 1]
                 next_s1 = next_track.get("s1")
+                next_spd = next_track.get("sp") or 0
                 try:
                     next_s1_int = int(next_s1)
                 except (ValueError, TypeError):
@@ -177,21 +180,12 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
                     if next_bits[23] == '1':
                         switch_events.append({"datetime": sw_time, "switch": 23})
                     last_switch_index = lifting_end_idx
+                elif next_spd <= 10:
+                    lifting_end_idx += 1
                 else:
                     break
 
-            # Также добавим начальное срабатывание
-            if bits[22] == '1':
-                switch_events.insert(0, {"datetime": timestamp, "switch": 22})
-            if bits[23] == '1':
-                switch_events.insert(0, {"datetime": timestamp, "switch": 23})
-
-            # === ВРЕМЯ +30 сек ПОСЛЕ последнего срабатывания, пока машина стоит ===
-            last_alarm_dt = datetime.datetime.strptime(tracks[last_switch_index].get("gt"), "%Y-%m-%d %H:%M:%S")
-            time_30_after_dt = last_alarm_dt + datetime.timedelta(seconds=sec_after)
-            time_30_after = time_30_after_dt.strftime("%Y-%m-%d %H:%M:%S")
-
-            # === НАХОДИМ ВРЕМЯ ПОСЛЕ (по движению) ===
+            # Ищем момент движения после последнего срабатывания
             time_after = None
             k = last_switch_index + 1
             while k < len(tracks):
@@ -201,6 +195,10 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
                         time_after = tracks[k - 1].get("gt")
                     break
                 k += 1
+
+            last_alarm_dt = datetime.datetime.strptime(tracks[last_switch_index].get("gt"), "%Y-%m-%d %H:%M:%S")
+            time_30_after_dt = last_alarm_dt + datetime.timedelta(seconds=sec_after)
+            time_30_after = time_30_after_dt.strftime("%Y-%m-%d %H:%M:%S")
 
             if time_before and time_after:
                 interval = get_interest_from_track(
@@ -218,7 +216,6 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
             i += 1
 
     return loading_intervals
-
 
 
 def find_by_lifting_switches_depr(tracks, sec_before=30, sec_after=30):
