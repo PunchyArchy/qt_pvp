@@ -5,8 +5,10 @@ import datetime
 import requests
 import aiohttp
 import asyncio
+import uuid
 import time
 import cv2
+import os
 
 
 @functions.cms_data_get_decorator()
@@ -242,19 +244,24 @@ async def get_frames(jsession, reg_id: str,
 
 
 def extract_first_frame(video_path: str,
-                        output_image_path: str = settings.FRAMES_TEMP_FOLDER):
+                        output_dir: str = settings.FRAMES_TEMP_FOLDER):
     cap = cv2.VideoCapture(video_path)
 
     if not cap.isOpened():
         logger.error(f"Не удалось открыть видео: {video_path}")
         return False
 
-    logger.debug(f"Пытаемся сохранить кадр в {output_image_path}")
+    os.makedirs(output_dir, exist_ok=True)  # убедимся, что папка есть
+
+    filename = f"{uuid.uuid4().hex}.jpg"
+    output_path = os.path.join(output_dir, filename)
+
+    logger.debug(f"Пытаемся сохранить кадр в {output_path}")
     success, frame = cap.read()
     if success:
-        cv2.imwrite(output_image_path, frame)
-        logger.info(f"Кадр успешно сохранён в: {output_image_path}")
-        return output_image_path
+        cv2.imwrite(output_path, frame)
+        logger.info(f"Кадр успешно сохранён в: {output_path}")
+        return output_path
     else:
         logger.warning("Не удалось прочитать кадр из видео.")
         return False
