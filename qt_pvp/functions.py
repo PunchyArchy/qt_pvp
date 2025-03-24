@@ -254,6 +254,8 @@ def get_reg_last_upload_time(reg_id):
 
 
 def save_new_reg_last_upload_time(reg_id, timestamp):
+    logger.info(
+        f"{reg_id}. Обновлен `last_upload_time`: {timestamp}")
     states = get_json_states()
     if not reg_id in states["regs"]:
         create_new_reg(reg_id)
