@@ -44,8 +44,8 @@ class Main:
             self.devices_in_progress.remove(reg_id)
 
     def get_interests(self, reg_id, reg_info, start_time, stop_time):
-        #interest_saved = main_funcs.get_interests(reg_id)
-        #if not interest_saved:
+        # interest_saved = main_funcs.get_interests(reg_id)
+        # if not interest_saved:
         tracks = cms_api.get_device_track_all_pages(
             jsession=self.jsession,
             device_id=reg_id,
@@ -59,10 +59,10 @@ class Main:
             by_lifting_limit_switch=reg_info["by_lifting_limit_switch"],
 
         )
-        #main_funcs.save_new_interests(reg_id, interests)
-        #else:
+        # main_funcs.save_new_interests(reg_id, interests)
+        # else:
         #    logger.info("Found saved interests in json")
-       #     interests = interest_saved
+        #     interests = interest_saved
         return interests
 
     async def download_reg_videos(self, reg_id, chanel_id: int = None,
@@ -123,7 +123,10 @@ class Main:
                 logger.warning(
                     f"{reg_id}. Не найдены видео на канале {chanel_id}")
                 continue
-
+            interest_cloud_folder = cloud_uploader.create_interest_folder_path(
+                interest_name=interest["name"],
+                dest_directory=settings.CLOUD_PATH)
+            interest["cloud_folder"] = interest_cloud_folder
             await self.process_and_upload_videos_async(reg_id, interest)
 
             if settings.config.getboolean("General", "pics_before_after"):
@@ -145,8 +148,8 @@ class Main:
                 logger.debug(f"Фото до - {frames_before}. "
                              f"Фото после - {frames_after}")
                 upload_status = await asyncio.to_thread(
-                    cloud_uploader.create_pics, interest["name"],
-                    settings.CLOUD_PATH, frames_before, frames_after
+                    cloud_uploader.create_pics, interest["cloud_folder"],
+                    frames_before, frames_after
                 )
 
                 if upload_status:
@@ -155,15 +158,18 @@ class Main:
                         logger.info(
                             f"{reg_id}: Загрузка прошла успешно. Удаляем локальные фото-файлы ({frame}).")
                         os.remove(frame)
-                #last_interest_time = self.get_last_interest_datetime(
+
+                cloud_uploader.upload_dict_as_json_to_cloud(
+                    data=interest["switch_events"],
+                    remote_folder_path=interest["cloud_folder"])
+                # last_interest_time = self.get_last_interest_datetime(
                 #    interests)
-                #main_funcs.save_new_reg_last_upload_time(reg_id,
+                # main_funcs.save_new_reg_last_upload_time(reg_id,
                 #                                         last_interest_time)
         # Обновляем `last_upload_time`
         last_interest_time = self.get_last_interest_datetime(
             interests) if interests else end_time
         main_funcs.save_new_reg_last_upload_time(reg_id, last_interest_time)
-
 
     async def process_and_upload_videos_async(self, reg_id, interest):
         interest_name = interest["name"]
@@ -190,8 +196,8 @@ class Main:
         logger.info(
             f"{reg_id}: Загружаем видео {interest_name} в облако.")
         upload_status = await asyncio.to_thread(
-            cloud_uploader.upload_file, interest_name, output_video_path,
-            settings.CLOUD_PATH
+            cloud_uploader.upload_file, output_video_path,
+            interest["cloud_folder"]
         )
 
         if upload_status:

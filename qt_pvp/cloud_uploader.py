@@ -1,7 +1,9 @@
-import os
-from datetime import datetime
 from webdav3.client import Client
+from qt_pvp import settings
 import posixpath
+import json
+import uuid
+import os
 
 # Настройки подключения к WebDAV серверу
 options = {
@@ -71,7 +73,17 @@ def get_interest_folder_path(interest_name, dest_directory):
     return registr_folder, date_folder_path, interest_folder_path
 
 
-def upload_file(interest_name, file_path, dest_directory):
+def create_interest_folder_path(interest_name, dest_directory):
+    registr_folder, date_folder_path, interest_folder_path = get_interest_folder_path(
+        interest_name, dest_directory)
+    # Проверяем и создаем папки, если их нет
+    create_folder_if_not_exists(client, registr_folder)
+    create_folder_if_not_exists(client, date_folder_path)
+    create_folder_if_not_exists(client, interest_folder_path)
+    return interest_folder_path
+
+
+def upload_file(file_path, interest_folder_path):
     """
     Загружает файл и фотографии в облако через WebDAV.
 
@@ -80,12 +92,6 @@ def upload_file(interest_name, file_path, dest_directory):
     :param pics: Словарь с фотографиями (before и after).
     :return: True, если все файлы загружены успешно, иначе False.
     """
-    registr_folder, date_folder_path, interest_folder_path = get_interest_folder_path(
-        interest_name, dest_directory)
-    # Проверяем и создаем папки, если их нет
-    create_folder_if_not_exists(client, registr_folder)
-    create_folder_if_not_exists(client, date_folder_path)
-    create_folder_if_not_exists(client, interest_folder_path)
 
     remote_path = posixpath.join(interest_folder_path,
                                  os.path.basename(file_path))
@@ -93,14 +99,9 @@ def upload_file(interest_name, file_path, dest_directory):
     return success
 
 
-def create_pics(interest_name, dest_directory, pics_before, pics_after):
-    registr_folder, date_folder_path, interest_folder_path = get_interest_folder_path(
-        interest_name, dest_directory)
+def create_pics(interest_folder_path, pics_before, pics_after):
     after_pics_folder = posixpath.join(interest_folder_path, "after_pics")
     before_pics_folder = posixpath.join(interest_folder_path, "before_pics")
-    create_folder_if_not_exists(client, registr_folder)
-    create_folder_if_not_exists(client, date_folder_path)
-    create_folder_if_not_exists(client, interest_folder_path)
 
     create_folder_if_not_exists(client, after_pics_folder)
     create_folder_if_not_exists(client, before_pics_folder)
@@ -125,3 +126,43 @@ def upload_pics(pics, destinaton_folder):
 
     except Exception as e:
         print(f"Ошибка при загрузке фотографий: {e}")
+
+
+def upload_dict_as_json_to_cloud(data: dict, remote_folder_path: str,
+                                 filename: str = "report.json"):
+    """
+    Сохраняет словарь в JSON и загружает на WebDAV в указанную папку.
+
+    :param data: Словарь с данными для сохранения
+    :param remote_folder_path: Папка в облаке для загрузки (WebDAV)
+    :param filename: Имя файла (по умолчанию — data.json)
+    """
+    try:
+        # Уникальное имя временного файла
+        local_filename = f"{uuid.uuid4().hex}.json"
+        local_file_path = os.path.join(settings.REPORTS_TEMP_FOLDER,
+                                       local_filename)
+
+        # Сохраняем словарь в JSON
+        with open(local_file_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+        # Убедимся, что папка в облаке существует
+        create_folder_if_not_exists(client, remote_folder_path)
+
+        # Задаём путь в облаке
+        remote_file_path = posixpath.join(remote_folder_path, filename)
+
+        # Загружаем файл
+        success = upload_file_to_cloud(client, local_file_path,
+                                       remote_file_path)
+
+        # Удаляем локальный файл после загрузки
+        if success:
+            delete_local_file(local_file_path)
+
+        return success
+
+    except Exception as e:
+        print(f"Ошибка при сохранении JSON в облако: {e}")
+        return False
