@@ -188,7 +188,7 @@ async def wait_and_get_dwn_url(jsession, download_task_url):
                 f'Get path: {str(response_json["oldTaskAll"]["dph"])}')
             return response_json["oldTaskAll"]["dph"]
         else:
-            time.sleep(2)
+            time.sleep(1)
 
 
 async def download_interest_videos(jsession, interest, chanel_id,
