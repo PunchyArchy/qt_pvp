@@ -85,7 +85,17 @@ def main(local_directory, dest_directory):
             delete_local_file(full_file_path)
 
 
-def upload_file(file_path, dest_directory, pics_before=None, pics_after=None):
+def get_interest_folder_path(interest_name, dest_directory):
+    registr_name, date_str = parse_filename(interest_name)
+    # Формируем пути на удаленном сервере
+    registr_folder = posixpath.join(dest_directory, registr_name)
+    date_folder = f'{date_str}'
+    date_folder_path = posixpath.join(registr_folder, date_folder)
+    interest_folder_path = posixpath.join(date_folder_path, interest_name)
+    return registr_folder, date_folder, interest_folder_path
+
+
+def upload_file(interest_name, file_path, dest_directory):
     """
     Загружает файл и фотографии в облако через WebDAV.
 
@@ -94,18 +104,23 @@ def upload_file(file_path, dest_directory, pics_before=None, pics_after=None):
     :param pics: Словарь с фотографиями (before и after).
     :return: True, если все файлы загружены успешно, иначе False.
     """
-    interest_name = os.path.basename(file_path)
-    registr_name, date_str = parse_filename(interest_name)
-    # Формируем пути на удаленном сервере
-    registr_folder = posixpath.join(dest_directory, registr_name)
-    date_folder = f'{date_str}'
-    date_folder_path = posixpath.join(registr_folder, date_folder)
-    interest_folder_path = posixpath.join(date_folder_path, interest_name)
+    registr_folder, date_folder_path, interest_folder_path = get_interest_folder_path(
+        interest_name, dest_directory)
+    # Проверяем и создаем папки, если их нет
+    create_folder_if_not_exists(client, registr_folder)
+    create_folder_if_not_exists(client, date_folder_path)
+    create_folder_if_not_exists(client, interest_folder_path)
 
+    success = upload_file_to_cloud(client, file_path, interest_folder_path)
+    # Загружаем фотографии из словаря pics
+    return success
+
+
+def create_pics(interest_name, dest_directory, pics_before, pics_after):
+    registr_folder, date_folder_path, interest_folder_path = get_interest_folder_path(
+        interest_name, dest_directory)
     after_pics_folder = posixpath.join(interest_folder_path, "after_pics")
     before_pics_folder = posixpath.join(interest_folder_path, "before_pics")
-
-    # Проверяем и создаем папки, если их нет
     create_folder_if_not_exists(client, registr_folder)
     create_folder_if_not_exists(client, date_folder_path)
     create_folder_if_not_exists(client, interest_folder_path)
@@ -117,9 +132,6 @@ def upload_file(file_path, dest_directory, pics_before=None, pics_after=None):
         upload_pics(pics_before, before_pics_folder)
     if pics_after:
         upload_pics(pics_after, after_pics_folder)
-    success = upload_file_to_cloud(client, file_path, interest_folder_path)
-    # Загружаем фотографии из словаря pics
-    return success
 
 
 def upload_pics(pics, destinaton_folder):

@@ -140,7 +140,19 @@ class Main:
                     day=interest["day"],
                     start_sec=interest["photo_after_sec"],
                     end_sec=interest["photo_after_sec"] + 1)
+                logger.debug(f"Фото до - {frames_before}. "
+                             f"Фото после - {frames_after}")
+                upload_status = await asyncio.to_thread(
+                    cloud_uploader.create_pics, interest["name"],
+                    settings.CLOUD_PATH, frames_before, frames_after
+                )
 
+                if upload_status:
+                    all_frames = frames_before + frames_after
+                    for frame in all_frames:
+                        logger.info(
+                            f"{reg_id}: Загрузка прошла успешно. Удаляем локальные фото-файлы ({frame}).")
+                        os.remove(frame)
         # Обновляем `last_upload_time`
         last_interest_time = self.get_last_interest_datetime(
             interests) if interests else end_time
@@ -169,11 +181,11 @@ class Main:
                 f"{reg_id}: Нечего выгружать на облако ({output_video_path}).")
             return
 
-        # Загружаем видео + фото тревоги в облако
+        # Загружаем видео
         logger.info(
-            f"{reg_id}: Загружаем {interest_name} в облако с фото тревоги.")
+            f"{reg_id}: Загружаем видео {interest_name} в облако.")
         upload_status = await asyncio.to_thread(
-            cloud_uploader.upload_file, output_video_path,
+            cloud_uploader.upload_file, interest_name, output_video_path,
             settings.CLOUD_PATH
         )
 
@@ -245,13 +257,6 @@ class Main:
     def get_last_interest_datetime(self, interests):
         last_interest = interests[-1]
         return last_interest["end_time"]
-
-    def upload_interest_video_to_cloud(self, interest_path,
-                                       destination=None, pics=None):
-        if not destination:
-            destination = settings.CLOUD_PATH
-        return cloud_uploader.upload_file(interest_path, destination,
-                                          pics=pics)
 
     async def mainloop(self):
         logger.info("Mainloop has been launched with success.")
