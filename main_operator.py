@@ -155,10 +155,10 @@ class Main:
                         logger.info(
                             f"{reg_id}: Загрузка прошла успешно. Удаляем локальные фото-файлы ({frame}).")
                         os.remove(frame)
-                last_interest_time = self.get_last_interest_datetime(
-                    interests)
-                main_funcs.save_new_reg_last_upload_time(reg_id,
-                                                         last_interest_time)
+                #last_interest_time = self.get_last_interest_datetime(
+                #    interests)
+                #main_funcs.save_new_reg_last_upload_time(reg_id,
+                #                                         last_interest_time)
         # Обновляем `last_upload_time`
         last_interest_time = self.get_last_interest_datetime(
             interests) if interests else end_time
