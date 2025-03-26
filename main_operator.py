@@ -159,7 +159,7 @@ class Main:
                             f"{reg_id}: Загрузка прошла успешно. Удаляем локальные фото-файлы ({frame}).")
                         os.remove(frame)
                 cloud_uploader.upload_dict_as_json_to_cloud(
-                    data=interest["switch_events"],
+                    data=interest["report"],
                     remote_folder_path=interest["cloud_folder"])
                 # last_interest_time = self.get_last_interest_datetime(
                 #    interests)

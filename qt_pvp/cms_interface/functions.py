@@ -208,7 +208,12 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
                     photo_before_timestamp=time_before,
                     photo_after_timestamp=time_after
                 )
-                interval["switch_events"] = switch_events
+                #interval["switch_events"] = switch_events
+                load_report = {"geo": track["ps"],
+                               "switches_amount": len(switch_events),
+                               "switch_events": switch_events}
+
+                interval["report"] = load_report
                 loading_intervals.append(interval)
 
             i = lifting_end_idx + 1
