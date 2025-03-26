@@ -93,10 +93,10 @@ class Main:
                 datetime.datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S") -
                 datetime.datetime.strptime(start_time,
                                            "%Y-%m-%d %H:%M:%S")).total_seconds()
-        if time_difference > 3600:
+        if time_difference > 900:
             end_time = (datetime.datetime.strptime(start_time,
                                                    "%Y-%m-%d %H:%M:%S") +
-                        datetime.timedelta(seconds=3600)).strftime(
+                        datetime.timedelta(seconds=900)).strftime(
                 "%Y-%m-%d %H:%M:%S")
         else:
             logger.debug(f"f{reg_id}. Time difference is too short "
