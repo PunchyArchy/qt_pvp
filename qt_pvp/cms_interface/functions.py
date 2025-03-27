@@ -290,7 +290,6 @@ def analyze_tracks_get_interests(tracks, by_stops=False,
         interests = get_interest_from_track(
             tracks[-1], tracks[0]["gt"], tracks[-1]["gt"])
     logger.debug(f"Get interests: {interests}")
-    raise ZeroDivisionError
     return interests
 
 
