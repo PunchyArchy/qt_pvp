@@ -201,6 +201,11 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
                     break
                 k += 1
 
+            if not time_after:
+                # Машина ещё не поехала, возможно выгрузка не завершена — пропускаем
+                i = lifting_end_idx + 1
+                continue
+
             last_alarm_dt = datetime.datetime.strptime(
                 tracks[last_switch_index].get("gt"), "%Y-%m-%d %H:%M:%S")
             time_30_after_dt = last_alarm_dt + datetime.timedelta(
