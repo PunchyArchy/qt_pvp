@@ -134,6 +134,9 @@ def get_device_track(jsession: str, device_id: str, start_time: str,
         timeout=60)
     return response
 
+@functions.cms_data_get_decorator()
+def get_devices(jsessuibg):
+    response = requests.get(f"{settings.cms_host}/StandardApiAction_queryUserVehicle.action?")
 
 def get_device_status(jsession: str, device_id: str):
     response = requests.get(
@@ -301,8 +304,84 @@ async def download_video(jsession, reg_id: str, channel_id: int,
             download_task_url=download_task_url)
         file_paths.append(file_path)
     return file_paths
+
+
+
+def send_cmsv6_message(dev_idno: str, jsession: str, text: str,
+                       host: str = "82.146.45.88", port: int = 6603):
+    """
+    Отправляет текстовое сообщение на экран регистратора через CMSV6 API.
+
+    :param dev_idno: ID регистратора (например, "018270348452")
+    :param jsession: Ключ сессии CMSV6 (получается через login)
+    :param text: Текст, который должен появиться на экране регистратора
+    :param host: IP-адрес CMSV6 сервера
+    :param port: Порт CMSV6 сервера (обычно 6603)
+    """
+    url = f"http://{host}:{port}/2/74"
+    params = {
+        "Command": "33536",
+        "DevIDNO": dev_idno,
+        "toMap": "1",
+        "jsession": jsession
+    }
+    payload = {
+        "Flag": 20,
+        "TextInfo": text,
+        "TextType": 1,
+        "utf8": 1
+    }
+
+    response = requests.post(url, params=params, json=payload)
+
+    try:
+        result = response.json()
+    except Exception:
+        result = {"error": "Invalid response", "raw": response.text}
+
+    return result
+
+
+def get_dev_idno_by_plate(jsession: str, plate_number: str,
+                          host: str = "82.146.45.88", port: int = 8080):
+    """
+    Получает DevIDNO по гос.номеру автомобиля через CMSV6 API.
+
+    :param jsession: Ключ сессии CMSV6
+    :param plate_number: Гос.номер машины (например, "А123ВС102")
+    :param host: IP-адрес CMSV6 сервера
+    :param port: Порт CMSV6 API (обычно 8080)
+    :return: DevIDNO (str) или None
+    """
+    url = f"http://{host}:{port}/StandardApiAction_queryDevice.action"
+    params = {"jsession": jsession}
+
+    response = requests.get(url, params=params)
+    try:
+        print(response)
+        data = response.json()
+        print(data)
+        devices = data.get("devices", [])
+        for device in devices:
+            print(device)
+            if device.get("vehicleNumber", "").replace(" ",
+                                                       "").upper() == plate_number.replace(
+                    " ", "").upper():
+                return device.get("devIdno")
+        return None
+    except Exception:
+        print("123")
+        return None
+
+
 # for interest in interests:
 #    get_interest_download_path(jsession, interest)
+
+log_data = login()
+res = send_cmsv6_message("018270348452", log_data.json()["jsession"], "123")
+print(res)
+ms = get_dev_idno_by_plate(log_data.json()["jsession"], "K630AX702")
+print(ms)
 
 
 # print(log_data)

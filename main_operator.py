@@ -273,7 +273,7 @@ class Main:
         while True:
             devices_online = self.get_devices_online()
             for device_dict in devices_online:
-                reg_id = device_dict["vid"]
+                reg_id = device_dict["did"]
                 print(reg_id)
                 await self.operate_device(reg_id)
             await asyncio.sleep(5)
@@ -281,7 +281,7 @@ class Main:
     def check_if_reg_online(self, reg_id):
         devices_online = self.get_devices_online()
         for device_dict in devices_online:
-            if reg_id == device_dict["vid"]:
+            if reg_id == device_dict["did"]:
                 return True
 
 

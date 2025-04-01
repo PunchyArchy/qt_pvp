@@ -76,7 +76,8 @@ def get_interest_from_track(track, start_time: str, end_time: str,
         "day": start_time_datetime.day,
         "start_time": start_time,
         "end_time": end_time,
-        "device_id": track["vid"],
+        "device_id": track["did"],
+        "car_number": track["vid"],
         "photo_before_timestamp": photo_before_timestamp,
         "photo_after_timestamp": photo_after_timestamp,
         "photo_before_sec": seconds_since_midnight(photo_before_datetime),
@@ -136,8 +137,10 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
         # Если найдено срабатывание концевика
         if bits[22] == '1' or bits[23] == '1':
             switch_events = []
-            current_dt = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
-            time_30_before_dt = current_dt - datetime.timedelta(seconds=sec_before)
+            current_dt = datetime.datetime.strptime(timestamp,
+                                                    "%Y-%m-%d %H:%M:%S")
+            time_30_before_dt = current_dt - datetime.timedelta(
+                seconds=sec_before)
 
             # Ищем момент остановки до первого срабатывания
             time_before = None
@@ -176,9 +179,11 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
                     lifting_end_idx += 1
                     sw_time = next_track.get("gt")
                     if next_bits[22] == '1':
-                        switch_events.append({"datetime": sw_time, "switch": 22})
+                        switch_events.append(
+                            {"datetime": sw_time, "switch": 22})
                     if next_bits[23] == '1':
-                        switch_events.append({"datetime": sw_time, "switch": 23})
+                        switch_events.append(
+                            {"datetime": sw_time, "switch": 23})
                     last_switch_index = lifting_end_idx
                 elif next_spd <= 10:
                     lifting_end_idx += 1
@@ -196,8 +201,10 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
                     break
                 k += 1
 
-            last_alarm_dt = datetime.datetime.strptime(tracks[last_switch_index].get("gt"), "%Y-%m-%d %H:%M:%S")
-            time_30_after_dt = last_alarm_dt + datetime.timedelta(seconds=sec_after)
+            last_alarm_dt = datetime.datetime.strptime(
+                tracks[last_switch_index].get("gt"), "%Y-%m-%d %H:%M:%S")
+            time_30_after_dt = last_alarm_dt + datetime.timedelta(
+                seconds=sec_after)
             time_30_after = time_30_after_dt.strftime("%Y-%m-%d %H:%M:%S")
 
             if time_before and time_after:
@@ -208,7 +215,7 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
                     photo_before_timestamp=time_before,
                     photo_after_timestamp=time_after
                 )
-                #interval["switch_events"] = switch_events
+                # interval["switch_events"] = switch_events
                 load_report = {"geo": track["ps"],
                                "switches_amount": len(switch_events),
                                "switch_events": switch_events}
@@ -369,3 +376,4 @@ def cms_data_get_decorator(tag='execute func'):
         return wrapper
 
     return decorator
+
