@@ -201,9 +201,18 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
                 k += 1
 
             if not time_after:
-                # Машина ещё не поехала, возможно выгрузка не завершена — пропускаем
-                i = lifting_end_idx + 1
-                continue
+                last_switch_time = datetime.datetime.strptime(
+                    tracks[last_switch_index]['gt'], "%Y-%m-%d %H:%M:%S")
+                now = datetime.datetime.now()
+                if (now - last_switch_time).total_seconds() > \
+                        settings.config.getint("Interests",
+                                               "MAX_WAIT_TIME_MINUTES") * 60:
+                    time_after = last_switch_time.strftime(
+                        "%Y-%m-%d %H:%M:%S")  # Принудительно завершаем
+                else:
+                    # Ещё ждём — выгрузка не завершена
+                    i = lifting_end_idx + 1
+                    continue
 
             last_alarm_dt = datetime.datetime.strptime(
                 tracks[last_switch_index].get("gt"), "%Y-%m-%d %H:%M:%S")
