@@ -118,7 +118,7 @@ class Main:
             interest = await cms_api.download_interest_videos(
                 self.jsession,
                 interest,
-                chanel_id, split)
+                chanel_id, split, reg_id=reg_id)
             if not interest:
                 logger.warning(
                     f"{reg_id}. Не найдены видео на канале {chanel_id}")

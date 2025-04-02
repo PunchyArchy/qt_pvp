@@ -46,6 +46,7 @@ def analyze_s1(s1_int: int):
     }
 
 
+
 def get_interest_from_track(track, start_time: str, end_time: str,
                             photo_before_timestamp: str = None,
                             photo_after_timestamp: str = None):
@@ -57,7 +58,6 @@ def get_interest_from_track(track, start_time: str, end_time: str,
                                                        "%Y-%m-%d %H:%M:%S")
     photo_after_datetime = datetime.datetime.strptime(photo_after_timestamp,
                                                       "%Y-%m-%d %H:%M:%S")
-
     return {
         "name": f"{track['vid']}_"
                 f"{start_time_datetime.year}."
@@ -76,8 +76,7 @@ def get_interest_from_track(track, start_time: str, end_time: str,
         "day": start_time_datetime.day,
         "start_time": start_time,
         "end_time": end_time,
-        "device_id": track["did"],
-        #"car_number": track["vid"],
+        "car_number": track["vid"],
         "photo_before_timestamp": photo_before_timestamp,
         "photo_after_timestamp": photo_after_timestamp,
         "photo_before_sec": seconds_since_midnight(photo_before_datetime),
@@ -382,3 +381,10 @@ def cms_data_get_decorator(tag='execute func'):
 
     return decorator
 
+@cms_data_get_decorator()
+def get_mdvr_by_car_number_from_cms(jsession, car_number=None):
+    response = requests.get(f"{settings.cms_host}/"
+                            f"StandardApiAction_getDeviceByVehicle.action?",
+                            params={'jsession': jsession,
+                                    "vehiIdno": car_number})
+    return response

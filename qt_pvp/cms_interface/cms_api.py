@@ -134,6 +134,8 @@ def get_device_track(jsession: str, device_id: str, start_time: str,
         timeout=60)
     return response
 
+
+
 @functions.cms_data_get_decorator()
 def get_devices(jsessuibg):
     response = requests.get(f"{settings.cms_host}/StandardApiAction_queryUserVehicle.action?")
@@ -194,7 +196,7 @@ async def wait_and_get_dwn_url(jsession, download_task_url):
             time.sleep(1)
 
 
-async def download_interest_videos(jsession, interest, chanel_id,
+async def download_interest_videos(jsession, interest, chanel_id, reg_id,
                                    split=False):
     logger.info(f"Загружаем видео...")
     start_time_datetime = datetime.datetime.strptime(
@@ -202,7 +204,7 @@ async def download_interest_videos(jsession, interest, chanel_id,
     interest["file_paths"] = []
     response = get_video(
         jsession=jsession,
-        device_id=interest["device_id"],
+        device_id=reg_id,
         chanel_id=chanel_id,
         start_time_seconds=interest["beg_sec"],
         end_time_seconds=interest["end_sec"],
