@@ -204,6 +204,8 @@ class Main:
             logger.info(
                 f"{reg_id}: Загрузка прошла успешно. Удаляем локальный файл.")
             os.remove(output_video_path)
+            os.remove(os.path.join(settings.TEMP_FOLDER,
+                                   interest_name))
         else:
             logger.error(f"{reg_id}: Ошибка загрузки {interest_name}.")
 
