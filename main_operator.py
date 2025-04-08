@@ -93,11 +93,13 @@ class Main:
                 datetime.datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S") -
                 datetime.datetime.strptime(start_time,
                                            "%Y-%m-%d %H:%M:%S")).total_seconds()
-        if time_difference > settings.config.getint("interests", "DOWNLOADING_INTERVAL") * 60:
+        if time_difference > settings.config.getint("interests",
+                                                    "DOWNLOADING_INTERVAL") * 60:
             end_time = (datetime.datetime.strptime(start_time,
                                                    "%Y-%m-%d %H:%M:%S") +
                         datetime.timedelta(
-                            seconds=settings.config.getint("interests", "DOWNLOADING_INTERVAL") * 60)).strftime(
+                            seconds=settings.config.getint("interests",
+                                                           "DOWNLOADING_INTERVAL") * 60)).strftime(
                 "%Y-%m-%d %H:%M:%S")
         else:
             logger.debug(f"f{reg_id}. Time difference is too short "
@@ -138,14 +140,14 @@ class Main:
                     jsession=self.jsession, reg_id=reg_id,
                     year=interest["year"], month=interest["month"],
                     day=interest["day"],
-                    start_sec=interest["photo_before_sec"],
+                    start_sec=interest["photo_before_sec"] - 1,
                     end_sec=interest["photo_before_sec"] + 1)
                 logger.debug(f"Кадры до: {frames_before}")
                 frames_after = await cms_api.get_frames(
                     jsession=self.jsession, reg_id=reg_id,
                     year=interest["year"], month=interest["month"],
                     day=interest["day"],
-                    start_sec=interest["photo_after_sec"],
+                    start_sec=interest["photo_after_sec"] - 1,
                     end_sec=interest["photo_after_sec"] + 1)
                 logger.debug(f"Фото до - {frames_before}. "
                              f"Фото после - {frames_after}")
@@ -205,8 +207,8 @@ class Main:
             logger.info(
                 f"{reg_id}: Загрузка прошла успешно. Удаляем локальный файл.")
             os.remove(output_video_path)
-            os.remove(os.path.join(settings.TEMP_FOLDER,
-                                   interest_name))
+            shutil.rmtree(os.path.join(settings.TEMP_FOLDER,
+                                       interest_name))
         else:
             logger.error(f"{reg_id}: Ошибка загрузки {interest_name}.")
 
