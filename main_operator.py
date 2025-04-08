@@ -93,12 +93,12 @@ class Main:
                 datetime.datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S") -
                 datetime.datetime.strptime(start_time,
                                            "%Y-%m-%d %H:%M:%S")).total_seconds()
-        if time_difference > settings.config.getint("interests",
+        if time_difference > settings.config.getint("Interests",
                                                     "DOWNLOADING_INTERVAL") * 60:
             end_time = (datetime.datetime.strptime(start_time,
                                                    "%Y-%m-%d %H:%M:%S") +
                         datetime.timedelta(
-                            seconds=settings.config.getint("interests",
+                            seconds=settings.config.getint("Interests",
                                                            "DOWNLOADING_INTERVAL") * 60)).strftime(
                 "%Y-%m-%d %H:%M:%S")
         else:
