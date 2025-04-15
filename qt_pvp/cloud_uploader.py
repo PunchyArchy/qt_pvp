@@ -1,3 +1,6 @@
+import time
+import traceback
+
 from webdav3.client import Client
 from qt_pvp.logger import logger
 from qt_pvp import settings
@@ -36,8 +39,20 @@ def create_folder_if_not_exists(client, folder_path):
     Проверяем существование папки и создаем её, если она отсутствует.
     """
     if not client.check(folder_path):
-        print(f"Папка {folder_path} не существует. Создаю...")
-        client.mkdir(folder_path)
+        logger.info(f"Папка {folder_path} не существует. Создаю...")
+        count = 0
+        while count < 2:
+            try:
+                client.mkdir(folder_path)
+                return True
+            except Exception as e:
+                logger.warning(
+                    f"Ошибка при создании папки {folder_path} на webdav! ({e})"
+                    f"Попытка {count}/2")
+                count += 1
+                time.sleep(1)
+        logger.critical(f"Не удалось создать папку {folder_path}")
+
 
 
 def upload_file_to_cloud(client, local_file_path, remote_path):
@@ -78,9 +93,11 @@ def create_interest_folder_path(interest_name, dest_directory):
     registr_folder, date_folder_path, interest_folder_path = get_interest_folder_path(
         interest_name, dest_directory)
     # Проверяем и создаем папки, если их нет
-    create_folder_if_not_exists(client, registr_folder)
-    create_folder_if_not_exists(client, date_folder_path)
-    create_folder_if_not_exists(client, interest_folder_path)
+    a = create_folder_if_not_exists(client, registr_folder)
+    b = create_folder_if_not_exists(client, date_folder_path)
+    c = create_folder_if_not_exists(client, interest_folder_path)
+    if not a or not b or not c:
+        return
     return interest_folder_path
 
 
@@ -104,12 +121,12 @@ def create_pics(interest_folder_path, pics_before, pics_after):
     after_pics_folder = posixpath.join(interest_folder_path, "after_pics")
     before_pics_folder = posixpath.join(interest_folder_path, "before_pics")
 
-    create_folder_if_not_exists(client, after_pics_folder)
-    create_folder_if_not_exists(client, before_pics_folder)
+    a = create_folder_if_not_exists(client, after_pics_folder)
+    b = create_folder_if_not_exists(client, before_pics_folder)
     # Загружаем основной файл на сервер
-    if pics_before:
+    if pics_before and a:
         upload_pics(pics_before, before_pics_folder)
-    if pics_after:
+    if pics_after and b:
         upload_pics(pics_after, after_pics_folder)
 
 
@@ -150,8 +167,9 @@ def upload_dict_as_json_to_cloud(data: dict, remote_folder_path: str,
             json.dump(data, f, indent=2, ensure_ascii=False)
 
         # Убедимся, что папка в облаке существует
-        create_folder_if_not_exists(client, remote_folder_path)
-
+        a = create_folder_if_not_exists(client, remote_folder_path)
+        if not a:
+            return
         # Задаём путь в облаке
         remote_file_path = posixpath.join(remote_folder_path, filename)
 
