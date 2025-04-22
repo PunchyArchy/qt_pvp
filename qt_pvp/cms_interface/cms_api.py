@@ -1,6 +1,7 @@
 from qt_pvp.cms_interface import functions
 from qt_pvp.logger import logger
 from qt_pvp import settings
+import numpy as np
 import datetime
 import requests
 import aiohttp
@@ -135,10 +136,11 @@ def get_device_track(jsession: str, device_id: str, start_time: str,
     return response
 
 
-
 @functions.cms_data_get_decorator()
 def get_devices(jsessuibg):
-    response = requests.get(f"{settings.cms_host}/StandardApiAction_queryUserVehicle.action?")
+    response = requests.get(
+        f"{settings.cms_host}/StandardApiAction_queryUserVehicle.action?")
+
 
 def get_device_status(jsession: str, device_id: str):
     response = requests.get(
@@ -235,42 +237,117 @@ async def get_frames(jsession, reg_id: str,
     channels = [0, 1, 2, 3, 4]
     frames = []
     for channel_id in channels:
-        videos_path = await download_video(jsession=jsession, reg_id=reg_id,
-                                           channel_id=channel_id, year=year,
-                                           month=month, day=day,
-                                           start_sec=start_sec,
-                                           end_sec=end_sec)
-        logger.debug(f"Chanel id {channel_id} - {videos_path}")
-        if not videos_path:
-            continue
-        video_path = videos_path[0]
-        frame_path = extract_first_frame(video_path)
-        frames.append(frame_path)
+        try:
+            videos_path = await download_video(jsession=jsession,
+                                               reg_id=reg_id,
+                                               channel_id=channel_id,
+                                               year=year,
+                                               month=month, day=day,
+                                               start_sec=start_sec,
+                                               end_sec=end_sec)
+            logger.debug(f"Channel id {channel_id} - {videos_path}")
+            if not videos_path:
+                continue
+            video_path = videos_path[0]
+
+            # Попытка извлечь кадр
+            frame_path = extract_first_frame(video_path)
+
+
+            if not frame_path:
+                logger.error(f"Не удалось получить кадр с канала {channel_id}")
+                continue
+
+            frames.append(frame_path)
+        except Exception as e:
+            logger.exception(f"Ошибка при обработке канала {channel_id}: {e}")
     return frames
 
 
+def log_no_image_event(reg_id: str, frame_path: str, context: str = "unknown"):
+    """
+    Логирует событие создания заглушки в отдельный файл.
+
+    :param reg_id: ID регистратора
+    :param frame_path: Путь к заглушке
+    :param context: Контекст - фото ДО, ПОСЛЕ и т.д.
+    """
+    NO_IMAGE_LOG_FILE = "no_image_events.log"
+
+    os.makedirs(os.path.dirname(NO_IMAGE_LOG_FILE) or ".", exist_ok=True)
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_line = f"{now} | RegID: {reg_id} | Context: {context} | Placeholder: {frame_path}\n"
+
+    with open(NO_IMAGE_LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(log_line)
+
+    logger.info(f"NO IMAGE событие залогировано: {log_line.strip()}")
+
+
 def extract_first_frame(video_path: str,
-                        output_dir: str = settings.FRAMES_TEMP_FOLDER):
-    cap = cv2.VideoCapture(video_path)
+                        output_dir: str = settings.FRAMES_TEMP_FOLDER,
+                        max_retries: int = 3,
+                        min_file_size_kb: int = 10,
+                        allow_placeholder: bool = True):
+    if not os.path.exists(video_path) or (
+            os.path.getsize(video_path) / 1024) < min_file_size_kb:
+        logger.error(f"Файл слишком маленький или не найден: {video_path}")
+        log_no_image_event(reg_id="dummy", frame_path=video_path,
+                           context="photo_before_after")
+        return _create_placeholder_image(
+            output_dir) if allow_placeholder else False
 
-    if not cap.isOpened():
-        logger.error(f"Не удалось открыть видео: {video_path}")
-        return False
+    cap = None
+    for attempt in range(max_retries):
+        cap = cv2.VideoCapture(video_path)
+        if cap.isOpened():
+            break
+        logger.warning(
+            f"Попытка {attempt + 1}: Не удалось открыть видео: {video_path}")
+        time.sleep(1)
 
-    os.makedirs(output_dir, exist_ok=True)  # убедимся, что папка есть
+    if not cap or not cap.isOpened():
+        logger.error(
+            f"Не удалось открыть видео после {max_retries} попыток: {video_path}")
+        return _create_placeholder_image(
+            output_dir) if allow_placeholder else False
+
+    os.makedirs(output_dir, exist_ok=True)
 
     filename = f"{uuid.uuid4().hex}.jpg"
     output_path = os.path.join(output_dir, filename)
 
     logger.debug(f"Пытаемся сохранить кадр в {output_path}")
     success, frame = cap.read()
-    if success:
+    cap.release()
+
+    if success and frame is not None:
         cv2.imwrite(output_path, frame)
         logger.info(f"Кадр успешно сохранён в: {output_path}")
         return output_path
     else:
         logger.warning("Не удалось прочитать кадр из видео.")
-        return False
+        return _create_placeholder_image(
+            output_dir) if allow_placeholder else False
+
+
+def _create_placeholder_image(output_dir: str):
+    """Создаёт заглушку — чёрное изображение с надписью NO IMAGE"""
+    os.makedirs(output_dir, exist_ok=True)
+
+    filename = f"{uuid.uuid4().hex}_placeholder.jpg"
+    output_path = os.path.join(output_dir, filename)
+
+    # Создаём чёрное изображение
+    img = np.zeros((720, 1280, 3), dtype=np.uint8)
+
+    # Пишем текст "NO IMAGE"
+    cv2.putText(img, "NO IMAGE", (400, 360),
+                cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3, cv2.LINE_AA)
+
+    cv2.imwrite(output_path, img)
+    logger.warning(f"Создана заглушка: {output_path}")
+    return output_path
 
 
 async def download_video(jsession, reg_id: str, channel_id: int,
@@ -306,7 +383,6 @@ async def download_video(jsession, reg_id: str, channel_id: int,
             download_task_url=download_task_url)
         file_paths.append(file_path)
     return file_paths
-
 
 
 def send_cmsv6_message(dev_idno: str, jsession: str, text: str,
@@ -368,7 +444,7 @@ def get_dev_idno_by_plate(jsession: str, plate_number: str,
             print(device)
             if device.get("vehicleNumber", "").replace(" ",
                                                        "").upper() == plate_number.replace(
-                    " ", "").upper():
+                " ", "").upper():
                 return device.get("devIdno")
         return None
     except Exception:
@@ -384,7 +460,6 @@ res = send_cmsv6_message("018270348452", log_data.json()["jsession"], "123")
 print(res)
 ms = get_dev_idno_by_plate(log_data.json()["jsession"], "K630AX702")
 print(ms)
-
 
 # print(log_data)
 # if res["result"] == 32:

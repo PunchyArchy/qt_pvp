@@ -144,10 +144,14 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
             # Ищем момент остановки до первого срабатывания
             time_before = None
             j = i
+
+            stop_duration = 0
             while j >= 0:
                 spd = tracks[j].get("sp") or 0
-                if spd <= 10:
-                    time_before = tracks[j].get("gt")
+                if int(spd) <= settings.config.getint("Interests", "MIN_STOP_SPEED"):
+                    stop_duration += 1  # условно 1 секунда за трекпойнт
+                    if stop_duration >= settings.config.getint("Interests", "MIN_STOP_DURATION_SEC"):
+                        time_before = tracks[j].get("gt")
                 else:
                     break
                 j -= 1

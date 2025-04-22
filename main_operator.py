@@ -140,17 +140,21 @@ class Main:
                     jsession=self.jsession, reg_id=reg_id,
                     year=interest["year"], month=interest["month"],
                     day=interest["day"],
-                    start_sec=interest["photo_before_sec"] - 1,
-                    end_sec=interest["photo_before_sec"] + 1)
+                    start_sec=interest["photo_before_sec"] - 3,
+                    end_sec=interest["photo_before_sec"] + 2)
                 logger.debug(f"Кадры до: {frames_before}")
                 frames_after = await cms_api.get_frames(
                     jsession=self.jsession, reg_id=reg_id,
                     year=interest["year"], month=interest["month"],
                     day=interest["day"],
-                    start_sec=interest["photo_after_sec"] - 1,
-                    end_sec=interest["photo_after_sec"] + 1)
+                    start_sec=interest["photo_after_sec"] - 3,
+                    end_sec=interest["photo_after_sec"] + 2)
                 logger.debug(f"Фото до - {frames_before}. "
                              f"Фото после - {frames_after}")
+                # Проводим анализ качества фото
+                quality_report = analyze_frames_quality(
+                    frames_before + frames_after)
+
                 upload_status = await asyncio.to_thread(
                     cloud_uploader.create_pics, interest["cloud_folder"],
                     frames_before, frames_after
@@ -173,6 +177,27 @@ class Main:
         last_interest_time = self.get_last_interest_datetime(
             interests) if interests else end_time
         main_funcs.save_new_reg_last_upload_time(reg_id, last_interest_time)
+
+    def analyze_frames_quality(self, frames: list):
+        """
+        Проверяет список кадров: сколько настоящих фото и сколько заглушек.
+        """
+        real_photos = 0
+        placeholders = 0
+
+        for frame_path in frames:
+            if "placeholder" in os.path.basename(frame_path).lower():
+                placeholders += 1
+            else:
+                real_photos += 1
+
+        logger.info(
+            f"Качество кадров: Реальные фото: {real_photos}, Заглушки: {placeholders}")
+        return {
+            "real_photos": real_photos,
+            "placeholders": placeholders,
+            "total": len(frames)
+        }
 
     async def process_and_upload_videos_async(self, reg_id, interest):
         interest_name = interest["name"]

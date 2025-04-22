@@ -54,7 +54,6 @@ def create_folder_if_not_exists(client, folder_path):
         logger.critical(f"Не удалось создать папку {folder_path}")
 
 
-
 def upload_file_to_cloud(client, local_file_path, remote_path):
     """
     Загрузка файла на WebDAV сервер в указанную папку.
