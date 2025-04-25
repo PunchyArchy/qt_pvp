@@ -198,7 +198,7 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
             k = last_switch_index + 1
             while k < len(tracks):
                 spd = tracks[k].get("sp") or 0
-                if spd > 10:
+                if spd > settings.config.getint("Interests", "MIN_STOP_SPEED"):
                     if k > 0:
                         time_after = tracks[k - 1].get("gt")
                     break
