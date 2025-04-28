@@ -38,7 +38,9 @@ def create_folder_if_not_exists(client, folder_path):
     """
     Проверяем существование папки и создаем её, если она отсутствует.
     """
-    if not client.check(folder_path):
+    try:
+        if client.check(folder_path):
+            return True  # Уже есть
         logger.info(f"Папка {folder_path} не существует. Создаю...")
         count = 0
         while count < 2:
@@ -47,11 +49,15 @@ def create_folder_if_not_exists(client, folder_path):
                 return True
             except Exception as e:
                 logger.warning(
-                    f"Ошибка при создании папки {folder_path} на webdav! ({e})"
-                    f"Попытка {count}/2")
+                    f"Ошибка при создании папки {folder_path} на WebDAV! ({e}) "
+                    f"Попытка {count+1}/2")
                 count += 1
                 time.sleep(1)
         logger.critical(f"Не удалось создать папку {folder_path}")
+        return False
+    except Exception as e:
+        logger.error(f"Ошибка при проверке существования папки {folder_path}: {e}")
+        return False
 
 
 def upload_file_to_cloud(client, local_file_path, remote_path):
@@ -91,14 +97,20 @@ def get_interest_folder_path(interest_name, dest_directory):
 def create_interest_folder_path(interest_name, dest_directory):
     registr_folder, date_folder_path, interest_folder_path = get_interest_folder_path(
         interest_name, dest_directory)
-    # Проверяем и создаем папки, если их нет
-    a = create_folder_if_not_exists(client, registr_folder)
-    b = create_folder_if_not_exists(client, date_folder_path)
-    c = create_folder_if_not_exists(client, interest_folder_path)
-    if not a or not b or not c:
-        return
-    return interest_folder_path
 
+    created_registr = create_folder_if_not_exists(client, registr_folder)
+    created_date = create_folder_if_not_exists(client, date_folder_path)
+    created_interest = create_folder_if_not_exists(client, interest_folder_path)
+
+    if not (created_registr and created_date and created_interest):
+        logger.error(
+            f"Не удалось создать структуру папок для интереса {interest_name}. "
+            f"registr_folder: {created_registr}, "
+            f"date_folder_path: {created_date}, "
+            f"interest_folder_path: {created_interest}")
+        return None  # Явно
+
+    return interest_folder_path
 
 def upload_file(file_path, interest_folder_path):
     """
