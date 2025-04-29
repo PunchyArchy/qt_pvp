@@ -4,7 +4,22 @@ from logging.handlers import TimedRotatingFileHandler
 from logging import Formatter
 from qt_pvp import settings
 import logging
+import time
 import os
+
+
+class CustomTimedRotatingFileHandler(TimedRotatingFileHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.suffix = "%Y-%m-%d"
+
+    def namer(self, default_name):
+        base, ext = os.path.splitext(default_name)
+        # Получаем дату из rolloverAt
+        rollover_time = time.strftime(self.suffix,
+                                      time.localtime(self.rolloverAt))
+        return f"journal_{rollover_time}.log"
+
 
 logging.getLogger("urllib3").setLevel(logging.INFO)
 
@@ -12,8 +27,7 @@ logger = logging.getLogger(__name__)
 if settings.config.getboolean("General", "debug"):
     logger.setLevel(logging.DEBUG)
 
-
-handler = TimedRotatingFileHandler(
+handler = CustomTimedRotatingFileHandler(
     filename=os.path.join(settings.LOGS_DIR, 'journal.log'),
     when='midnight',
     backupCount=60,
