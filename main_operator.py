@@ -152,9 +152,9 @@ class Main:
                 logger.debug(f"Фото до - {frames_before}. "
                              f"Фото после - {frames_after}")
                 # Проводим анализ качества фото
-                quality_report = analyze_frames_quality(
+                quality_report = self.analyze_frames_quality(
                     frames_before + frames_after)
-
+                logger.info(f"Анализ качества фото: {quality_report}")
                 upload_status = await asyncio.to_thread(
                     cloud_uploader.create_pics, interest["cloud_folder"],
                     frames_before, frames_after
