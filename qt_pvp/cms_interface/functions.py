@@ -251,9 +251,11 @@ def find_first_stable_stop(tracks, start_index, current_dt, settings):
     cutoff_time = current_dt - datetime.timedelta(seconds=settings.config.getint("Interests", "MAX_LOOKBACK_SECONDS"))
     min_stop_speed = settings.config.getint("Interests", "MIN_STOP_SPEED")
     min_stop_duration = settings.config.getint("Interests", "MIN_STOP_DURATION_SEC")
+    min_distance_from_event = 50  # секунд, за сколько минимум до концевика должна заканчиваться остановка
 
     stop_count = 0
     start_idx = None
+    j_end_time = None
 
     j = start_index
     while j >= 0:
@@ -265,21 +267,28 @@ def find_first_stable_stop(tracks, start_index, current_dt, settings):
         if int(spd) <= min_stop_speed:
             stop_count += 1
             if start_idx is None:
-                start_idx = j  # фиксируем только ОДИН РАЗ начало серии
+                start_idx = j
+            j_end_time = point_time  # фиксируем конец серии
         else:
-            # серия прервана → проверяем, длилась ли достаточно
-            if stop_count >= min_stop_duration and start_idx is not None:
-                return tracks[start_idx].get("gt")
-            # если нет → сбрасываем
+            # серия прервана → проверяем условия
+            if stop_count >= min_stop_duration and j_end_time:
+                delta_sec = (current_dt - j_end_time).total_seconds()
+                if delta_sec >= min_distance_from_event:
+                    return tracks[start_idx].get("gt")
+            # сброс
             stop_count = 0
             start_idx = None
+            j_end_time = None
         j -= 1
 
     # если серия была прямо в начале окна
-    if stop_count >= min_stop_duration and start_idx is not None:
-        return tracks[start_idx].get("gt")
+    if stop_count >= min_stop_duration and j_end_time:
+        delta_sec = (current_dt - j_end_time).total_seconds()
+        if delta_sec >= min_distance_from_event:
+            return tracks[start_idx].get("gt")
 
     return None
+
 
 
 
