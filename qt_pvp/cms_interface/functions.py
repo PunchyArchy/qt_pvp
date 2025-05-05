@@ -114,16 +114,7 @@ def find_stops(tracks):
     # Возвращаем список без первого и последнего элемента
     return stop_intervals[1:-1] if len(stop_intervals) > 2 else []
 
-
 def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
-    """
-    Ищет интервалы погрузки мусоровоза по срабатыванию концевиков (бит 22 и 23 в s1).
-    Для каждого такого интервала определяет:
-      - timestamp для видео: начало и конец (±30 секунд от концевиков)
-      - timestamp для фото ДО: первая стабильная остановка перед началом загрузки
-      - timestamp для фото ПОСЛЕ: последняя остановка перед подтверждённым выездом
-    Возвращает список интересов (intervals).
-    """
     loading_intervals = []
     i = 0
     while i < len(tracks):
@@ -140,13 +131,30 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
         bits = list(bin(s1_int & 0xFFFFFFFF)[2:].zfill(32))
         bits.reverse()
 
-        # Обнаружение первого срабатывания концевика
+        # Если найдено срабатывание концевика
         if bits[22] == '1' or bits[23] == '1':
             switch_events = []
-            current_dt = datetime.datetime.strptime(timestamp,
-                                                    "%Y-%m-%d %H:%M:%S")
-            time_30_before_dt = current_dt - datetime.timedelta(
-                seconds=sec_before)
+            current_dt = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+            time_30_before_dt = current_dt - datetime.timedelta(seconds=sec_before)
+
+            # === Новый улучшенный блок поиска time_before ===
+            time_before = None
+            stop_count = 0
+            first_stop_idx = None
+            j = i
+            while j >= 0:
+                spd = tracks[j].get("sp") or 0
+                if int(spd) <= settings.config.getint("Interests", "MIN_STOP_SPEED"):
+                    stop_count += 1
+                    if first_stop_idx is None:
+                        first_stop_idx = j
+                    if stop_count >= settings.config.getint("Interests", "MIN_STOP_DURATION_SEC"):
+                        time_before = tracks[first_stop_idx].get("gt")
+                        break
+                else:
+                    stop_count = 0
+                    first_stop_idx = None
+                j -= 1
 
             lifting_end_idx = i
             last_switch_index = i
@@ -156,7 +164,7 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
             if bits[23] == '1':
                 switch_events.append({"datetime": timestamp, "switch": 23})
 
-            # Поиск серии срабатываний концевиков
+            # Продолжаем искать последующие срабатывания, пока машина стоит
             while lifting_end_idx + 1 < len(tracks):
                 next_track = tracks[lifting_end_idx + 1]
                 next_s1 = next_track.get("s1")
@@ -173,74 +181,49 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
                     lifting_end_idx += 1
                     sw_time = next_track.get("gt")
                     if next_bits[22] == '1':
-                        switch_events.append(
-                            {"datetime": sw_time, "switch": 22})
+                        switch_events.append({"datetime": sw_time, "switch": 22})
                     if next_bits[23] == '1':
-                        switch_events.append(
-                            {"datetime": sw_time, "switch": 23})
+                        switch_events.append({"datetime": sw_time, "switch": 23})
                     last_switch_index = lifting_end_idx
                 elif next_spd <= 10:
                     lifting_end_idx += 1
                 else:
                     break
 
-            last_switch_time = parse_time(tracks[last_switch_index]['gt'])
-            now = datetime.datetime.now()
-
-            # Проверка: завершилась ли погрузка (по таймауту или движению)
-            if (
-                    now - last_switch_time).total_seconds() > settings.config.getint(
-                    "Interests", "MAX_WAIT_TIME_MINUTES") * 60:
-                time_after = last_switch_time.strftime("%Y-%m-%d %H:%M:%S")
-            else:
-                k = last_switch_index + 1
-                while k < len(tracks):
-                    spd = tracks[k].get("sp") or 0
-                    if spd > settings.config.getint("Interests",
-                                                    "MIN_STOP_SPEED"):
-                        if k > 0:
-                            time_after = tracks[k - 1].get("gt")
+            # === Новый улучшенный блок поиска time_after ===
+            stop_count = 0
+            move_count = 0
+            last_stop_idx = None
+            time_after = None
+            k = last_switch_index + 1
+            while k < len(tracks):
+                spd = tracks[k].get("sp") or 0
+                if int(spd) <= settings.config.getint("Interests", "MIN_STOP_SPEED"):
+                    stop_count += 1
+                    move_count = 0
+                    last_stop_idx = k
+                elif stop_count >= settings.config.getint("Interests", "MIN_STOP_DURATION_SEC") and int(spd) >= settings.config.getint("Interests", "MIN_MOVE_SPEED"):
+                    move_count += 1
+                    if move_count >= settings.config.getint("Interests", "MIN_MOVE_DURATION_SEC") and last_stop_idx is not None:
+                        time_after = tracks[last_stop_idx].get("gt")
                         break
-                    k += 1
+                else:
+                    stop_count = 0
+                    move_count = 0
+                k += 1
+
+            if not time_after:
+                last_switch_time = datetime.datetime.strptime(tracks[last_switch_index]['gt'], "%Y-%m-%d %H:%M:%S")
+                now = datetime.datetime.now()
+                if (now - last_switch_time).total_seconds() > settings.config.getint("Interests", "MAX_WAIT_TIME_MINUTES") * 60:
+                    time_after = last_switch_time.strftime("%Y-%m-%d %H:%M:%S")  # Принудительно завершаем
                 else:
                     i = lifting_end_idx + 1
                     continue
 
-            # Конец интервала для видео
-            time_30_after_dt = last_switch_time + datetime.timedelta(
-                seconds=sec_after)
+            last_alarm_dt = datetime.datetime.strptime(tracks[last_switch_index].get("gt"), "%Y-%m-%d %H:%M:%S")
+            time_30_after_dt = last_alarm_dt + datetime.timedelta(seconds=sec_after)
             time_30_after = time_30_after_dt.strftime("%Y-%m-%d %H:%M:%S")
-
-            # Получаем сегменты треков для анализа фото до и после
-            tracks_before, tracks_after = extract_before_after_segments(
-                tracks, i, last_switch_index,
-                sec_before=settings.config.getint("Interests",
-                                                  "PHOTO_BEFORE_SEC"),
-                sec_after=settings.config.getint("Interests",
-                                                 "PHOTO_AFTER_SEC")
-            )
-
-            # Анализ: фото ДО
-            time_before = find_photo_before_timestamp(
-                tracks_before,
-                stop_speed=settings.config.getint("Interests",
-                                                  "MIN_STOP_SPEED"),
-                min_stop_points=settings.config.getint("Interests",
-                                                       "MIN_STOP_DURATION_SEC")
-            )
-
-            # Анализ: фото ПОСЛЕ
-            time_after = find_photo_after_timestamp(
-                tracks_after,
-                stop_speed=settings.config.getint("Interests",
-                                                  "MIN_STOP_SPEED"),
-                move_speed=settings.config.getint("Interests",
-                                                  "MIN_MOVE_SPEED"),
-                min_stop_points=settings.config.getint("Interests",
-                                                       "MIN_STOP_DURATION_SEC"),
-                min_move_points=settings.config.getint("Interests",
-                                                       "MIN_MOVE_DURATION_SEC")
-            )
 
             if time_before and time_after:
                 interval = get_interest_from_track(
@@ -250,11 +233,7 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
                     photo_before_timestamp=time_before,
                     photo_after_timestamp=time_after
                 )
-                load_report = {
-                    "geo": track["ps"],
-                    "switches_amount": len(switch_events),
-                    "switch_events": switch_events
-                }
+                load_report = {"geo": track["ps"], "switches_amount": len(switch_events), "switch_events": switch_events}
                 interval["report"] = load_report
                 loading_intervals.append(interval)
 
@@ -263,6 +242,7 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
             i += 1
 
     return loading_intervals
+
 
 
 def extract_before_after_segments(tracks, first_switch_index,
