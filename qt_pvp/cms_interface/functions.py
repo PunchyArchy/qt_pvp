@@ -114,6 +114,7 @@ def find_stops(tracks):
     # Возвращаем список без первого и последнего элемента
     return stop_intervals[1:-1] if len(stop_intervals) > 2 else []
 
+
 def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
     loading_intervals = []
     i = 0
@@ -134,35 +135,14 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
         # Если найдено срабатывание концевика
         if bits[22] == '1' or bits[23] == '1':
             switch_events = []
-            current_dt = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
-            time_30_before_dt = current_dt - datetime.timedelta(seconds=sec_before)
+            current_dt = datetime.datetime.strptime(timestamp,
+                                                    "%Y-%m-%d %H:%M:%S")
+            time_30_before_dt = current_dt - datetime.timedelta(
+                seconds=sec_before)
 
             # === Новый улучшенный блок поиска time_before ===
-            time_before = None
-            j = i
-            stop_duration = 0
-            first_stop_idx = None
-            cutoff_time = current_dt - datetime.timedelta(
-                seconds=settings.config.getint("Interests",
-                                               "MAX_LOOKBACK_SECONDS"))
-            while j >= 0:
-                point_time = datetime.datetime.strptime(tracks[j].get("gt"),
-                                                        "%Y-%m-%d %H:%M:%S")
-                if point_time < cutoff_time:
-                    break  # вышли за предел окна поиска
-                spd = tracks[j].get("sp") or 0
-                if int(spd) <= settings.config.getint("Interests",
-                                                      "MIN_STOP_SPEED"):
-                    stop_duration += 1
-                    if first_stop_idx is None:
-                        first_stop_idx = j
-                    if stop_duration >= settings.config.getint("Interests",
-                                                               "MIN_STOP_DURATION_SEC"):
-                        time_before = tracks[first_stop_idx].get("gt")
-                else:
-                    stop_duration = 0
-                    first_stop_idx = None
-                j -= 1
+            time_before = find_first_stable_stop(
+                tracks, i, current_dt, settings)
 
             lifting_end_idx = i
             last_switch_index = i
@@ -189,9 +169,11 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
                     lifting_end_idx += 1
                     sw_time = next_track.get("gt")
                     if next_bits[22] == '1':
-                        switch_events.append({"datetime": sw_time, "switch": 22})
+                        switch_events.append(
+                            {"datetime": sw_time, "switch": 22})
                     if next_bits[23] == '1':
-                        switch_events.append({"datetime": sw_time, "switch": 23})
+                        switch_events.append(
+                            {"datetime": sw_time, "switch": 23})
                     last_switch_index = lifting_end_idx
                 elif next_spd <= 10:
                     lifting_end_idx += 1
@@ -206,13 +188,18 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
             k = last_switch_index + 1
             while k < len(tracks):
                 spd = tracks[k].get("sp") or 0
-                if int(spd) <= settings.config.getint("Interests", "MIN_STOP_SPEED"):
+                if int(spd) <= settings.config.getint("Interests",
+                                                      "MIN_STOP_SPEED"):
                     stop_count += 1
                     move_count = 0
                     last_stop_idx = k
-                elif stop_count >= settings.config.getint("Interests", "MIN_STOP_DURATION_SEC") and int(spd) >= settings.config.getint("Interests", "MIN_MOVE_SPEED"):
+                elif stop_count >= settings.config.getint("Interests",
+                                                          "MIN_STOP_DURATION_SEC") and int(
+                        spd) >= settings.config.getint("Interests",
+                                                       "MIN_MOVE_SPEED"):
                     move_count += 1
-                    if move_count >= settings.config.getint("Interests", "MIN_MOVE_DURATION_SEC") and last_stop_idx is not None:
+                    if move_count >= settings.config.getint("Interests",
+                                                            "MIN_MOVE_DURATION_SEC") and last_stop_idx is not None:
                         time_after = tracks[last_stop_idx].get("gt")
                         break
                 else:
@@ -221,16 +208,22 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
                 k += 1
 
             if not time_after:
-                last_switch_time = datetime.datetime.strptime(tracks[last_switch_index]['gt'], "%Y-%m-%d %H:%M:%S")
+                last_switch_time = datetime.datetime.strptime(
+                    tracks[last_switch_index]['gt'], "%Y-%m-%d %H:%M:%S")
                 now = datetime.datetime.now()
-                if (now - last_switch_time).total_seconds() > settings.config.getint("Interests", "MAX_WAIT_TIME_MINUTES") * 60:
-                    time_after = last_switch_time.strftime("%Y-%m-%d %H:%M:%S")  # Принудительно завершаем
+                if (
+                        now - last_switch_time).total_seconds() > settings.config.getint(
+                        "Interests", "MAX_WAIT_TIME_MINUTES") * 60:
+                    time_after = last_switch_time.strftime(
+                        "%Y-%m-%d %H:%M:%S")  # Принудительно завершаем
                 else:
                     i = lifting_end_idx + 1
                     continue
 
-            last_alarm_dt = datetime.datetime.strptime(tracks[last_switch_index].get("gt"), "%Y-%m-%d %H:%M:%S")
-            time_30_after_dt = last_alarm_dt + datetime.timedelta(seconds=sec_after)
+            last_alarm_dt = datetime.datetime.strptime(
+                tracks[last_switch_index].get("gt"), "%Y-%m-%d %H:%M:%S")
+            time_30_after_dt = last_alarm_dt + datetime.timedelta(
+                seconds=sec_after)
             time_30_after = time_30_after_dt.strftime("%Y-%m-%d %H:%M:%S")
 
             if time_before and time_after:
@@ -241,7 +234,9 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
                     photo_before_timestamp=time_before,
                     photo_after_timestamp=time_after
                 )
-                load_report = {"geo": track["ps"], "switches_amount": len(switch_events), "switch_events": switch_events}
+                load_report = {"geo": track["ps"],
+                               "switches_amount": len(switch_events),
+                               "switch_events": switch_events}
                 interval["report"] = load_report
                 loading_intervals.append(interval)
 
@@ -251,6 +246,53 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
 
     return loading_intervals
 
+
+def find_first_stable_stop(tracks, start_index, current_dt, settings):
+    """
+    Ищет самую первую устойчивую остановку в пределах окна поиска.
+
+    :param tracks: список треков
+    :param start_index: индекс, откуда начать искать (обычно i, где нашли концевик)
+    :param current_dt: datetime текущей точки (где нашли концевик)
+    :param settings: конфиг с параметрами
+    :return: timestamp найденной остановки или None
+    """
+    cutoff_time = current_dt - datetime.timedelta(
+        seconds=settings.config.getint("Interests", "MAX_LOOKBACK_SECONDS"))
+    min_stop_speed = settings.config.getint("Interests", "MIN_STOP_SPEED")
+    min_stop_duration = settings.config.getint("Interests",
+                                               "MIN_STOP_DURATION_SEC")
+
+    stop_count = 0
+    candidate_idx = None
+
+    j = start_index
+    while j >= 0:
+        point_time = datetime.datetime.strptime(tracks[j].get("gt"),
+                                                "%Y-%m-%d %H:%M:%S")
+        if point_time < cutoff_time:
+            break  # вышли за предел окна
+
+        spd = tracks[j].get("sp") or 0
+        if int(spd) <= min_stop_speed:
+            stop_count += 1
+            if candidate_idx is None:
+                candidate_idx = j  # запоминаем начало серии
+        else:
+            # серия прервана, проверяем длину
+            if stop_count >= min_stop_duration:
+                return tracks[candidate_idx].get(
+                    "gt")  # нашли первую подходящую
+            # если нет, сбрасываем
+            stop_count = 0
+            candidate_idx = None
+        j -= 1
+
+    # если в самом начале была подходящая серия
+    if stop_count >= min_stop_duration and candidate_idx is not None:
+        return tracks[candidate_idx].get("gt")
+
+    return None  # не нашли
 
 
 def extract_before_after_segments(tracks, first_switch_index,
