@@ -139,20 +139,21 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
 
             # === Новый улучшенный блок поиска time_before ===
             time_before = None
-            stop_count = 0
-            first_stop_idx = None
             j = i
+            stop_duration = 0
+            first_stop_idx = None
             while j >= 0:
                 spd = tracks[j].get("sp") or 0
-                if int(spd) <= settings.config.getint("Interests", "MIN_STOP_SPEED"):
-                    stop_count += 1
+                if int(spd) <= settings.config.getint("Interests",
+                                                      "MIN_STOP_SPEED"):
+                    stop_duration += 1
                     if first_stop_idx is None:
                         first_stop_idx = j
-                    if stop_count >= settings.config.getint("Interests", "MIN_STOP_DURATION_SEC"):
+                    if stop_duration >= settings.config.getint("Interests",
+                                                               "MIN_STOP_DURATION_SEC"):
                         time_before = tracks[first_stop_idx].get("gt")
-                        break
                 else:
-                    stop_count = 0
+                    stop_duration = 0
                     first_stop_idx = None
                 j -= 1
 
