@@ -14,11 +14,11 @@ class CustomTimedRotatingFileHandler(TimedRotatingFileHandler):
         self.suffix = "%Y-%m-%d"
 
     def namer(self, default_name):
+        dir_name = os.path.dirname(default_name)
         base, ext = os.path.splitext(default_name)
-        # Получаем дату из rolloverAt
         rollover_time = time.strftime(self.suffix,
                                       time.localtime(self.rolloverAt))
-        return f"journal_{rollover_time}.log"
+        return os.path.join(dir_name, f"journal_{rollover_time}.log")
 
 
 logging.getLogger("urllib3").setLevel(logging.INFO)
