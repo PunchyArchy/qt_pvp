@@ -142,7 +142,14 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
             j = i
             stop_duration = 0
             first_stop_idx = None
+            cutoff_time = current_dt - datetime.timedelta(
+                seconds=settings.config.getint("Interests",
+                                               "MAX_LOOKBACK_SECONDS"))
             while j >= 0:
+                point_time = datetime.datetime.strptime(tracks[j].get("gt"),
+                                                        "%Y-%m-%d %H:%M:%S")
+                if point_time < cutoff_time:
+                    break  # вышли за предел окна поиска
                 spd = tracks[j].get("sp") or 0
                 if int(spd) <= settings.config.getint("Interests",
                                                       "MIN_STOP_SPEED"):
