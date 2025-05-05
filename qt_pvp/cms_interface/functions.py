@@ -248,51 +248,39 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
 
 
 def find_first_stable_stop(tracks, start_index, current_dt, settings):
-    """
-    Ищет самую первую устойчивую остановку в пределах окна поиска.
-
-    :param tracks: список треков
-    :param start_index: индекс, откуда начать искать (обычно i, где нашли концевик)
-    :param current_dt: datetime текущей точки (где нашли концевик)
-    :param settings: конфиг с параметрами
-    :return: timestamp найденной остановки или None
-    """
-    cutoff_time = current_dt - datetime.timedelta(
-        seconds=settings.config.getint("Interests", "MAX_LOOKBACK_SECONDS"))
+    cutoff_time = current_dt - datetime.timedelta(seconds=settings.config.getint("Interests", "MAX_LOOKBACK_SECONDS"))
     min_stop_speed = settings.config.getint("Interests", "MIN_STOP_SPEED")
-    min_stop_duration = settings.config.getint("Interests",
-                                               "MIN_STOP_DURATION_SEC")
+    min_stop_duration = settings.config.getint("Interests", "MIN_STOP_DURATION_SEC")
 
     stop_count = 0
-    candidate_idx = None
+    start_idx = None
 
     j = start_index
     while j >= 0:
-        point_time = datetime.datetime.strptime(tracks[j].get("gt"),
-                                                "%Y-%m-%d %H:%M:%S")
+        point_time = datetime.datetime.strptime(tracks[j].get("gt"), "%Y-%m-%d %H:%M:%S")
         if point_time < cutoff_time:
-            break  # вышли за предел окна
+            break
 
         spd = tracks[j].get("sp") or 0
         if int(spd) <= min_stop_speed:
             stop_count += 1
-            if candidate_idx is None:
-                candidate_idx = j  # запоминаем начало серии
+            if start_idx is None:
+                start_idx = j  # фиксируем только ОДИН РАЗ начало серии
         else:
-            # серия прервана, проверяем длину
-            if stop_count >= min_stop_duration:
-                return tracks[candidate_idx].get(
-                    "gt")  # нашли первую подходящую
-            # если нет, сбрасываем
+            # серия прервана → проверяем, длилась ли достаточно
+            if stop_count >= min_stop_duration and start_idx is not None:
+                return tracks[start_idx].get("gt")
+            # если нет → сбрасываем
             stop_count = 0
-            candidate_idx = None
+            start_idx = None
         j -= 1
 
-    # если в самом начале была подходящая серия
-    if stop_count >= min_stop_duration and candidate_idx is not None:
-        return tracks[candidate_idx].get("gt")
+    # если серия была прямо в начале окна
+    if stop_count >= min_stop_duration and start_idx is not None:
+        return tracks[start_idx].get("gt")
 
-    return None  # не нашли
+    return None
+
 
 
 def extract_before_after_segments(tracks, first_switch_index,
