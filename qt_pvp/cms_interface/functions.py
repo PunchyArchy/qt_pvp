@@ -262,6 +262,7 @@ def find_first_stable_stop(tracks, start_index, current_dt, settings):
     j_end_time = None
 
     j = start_index
+    tracks_sorted = sorted(tracks, key=lambda x: x['gt'])
     while j >= 0:
         point_time = datetime.datetime.strptime(tracks[j].get("gt"),
                                                 "%Y-%m-%d %H:%M:%S")
