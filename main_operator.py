@@ -318,12 +318,9 @@ class Main:
 
 if __name__ == "__main__":
     d = Main()
-    #loop = asyncio.get_event_loop()
-    #loop.run_until_complete(d.mainloop())
-    reg_id = "018270348452"
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(d.mainloop())
     #reg_id = "K630AX702"
-    reg_info = main_funcs.get_reg_info(reg_id)
-    d.get_interests(reg_id, reg_info, "2025-05-08 16:50:45", "2025-05-08 17:30:00")
     #d.download_reg_videos(
     #    "2024050601",
     #    chanel_id=0,
