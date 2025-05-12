@@ -131,9 +131,10 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
 
         bits = list(bin(s1_int & 0xFFFFFFFF)[2:].zfill(32))
         bits.reverse()
-
         # Если найдено срабатывание концевика
+        i += 1
         if bits[22] == '1' or bits[23] == '1':
+            logger.debug(f"Triggered. Bits-22:{bits[22]}, bits-23:{bits[23]}")
             switch_events = []
             current_dt = datetime.datetime.strptime(timestamp,
                                                     "%Y-%m-%d %H:%M:%S")
@@ -143,6 +144,7 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
             # === Новый улучшенный блок поиска time_before ===
             time_before = find_first_stable_stop(
                 tracks, i, current_dt, settings)
+            logger.debug(f"Triggered. Time_before - {time_before}")
 
             lifting_end_idx = i
             last_switch_index = i
@@ -195,8 +197,8 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
                     last_stop_idx = k
                 elif stop_count >= settings.config.getint("Interests",
                                                           "MIN_STOP_DURATION_SEC") and int(
-                        spd) >= settings.config.getint("Interests",
-                                                       "MIN_MOVE_SPEED"):
+                    spd) >= settings.config.getint("Interests",
+                                                   "MIN_MOVE_SPEED"):
                     move_count += 1
                     if move_count >= settings.config.getint("Interests",
                                                             "MIN_MOVE_DURATION_SEC") and last_stop_idx is not None:
@@ -213,7 +215,7 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
                 now = datetime.datetime.now()
                 if (
                         now - last_switch_time).total_seconds() > settings.config.getint(
-                        "Interests", "MAX_WAIT_TIME_MINUTES") * 60:
+                    "Interests", "MAX_WAIT_TIME_MINUTES") * 60:
                     time_after = last_switch_time.strftime(
                         "%Y-%m-%d %H:%M:%S")  # Принудительно завершаем
                 else:
@@ -248,10 +250,12 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
 
 
 def find_first_stable_stop(tracks, start_index, current_dt, settings):
-    cutoff_time = current_dt - datetime.timedelta(seconds=settings.config.getint("Interests", "MAX_LOOKBACK_SECONDS"))
+    cutoff_time = current_dt - datetime.timedelta(
+        seconds=settings.config.getint("Interests", "MAX_LOOKBACK_SECONDS"))
     min_stop_speed = settings.config.getint("Interests", "MIN_STOP_SPEED")
-    min_stop_duration = settings.config.getint("Interests", "MIN_STOP_DURATION_SEC")
-    min_distance_from_event = 50  # секунд, за сколько минимум до концевика должна заканчиваться остановка
+    min_stop_duration = settings.config.getint("Interests",
+                                               "MIN_STOP_DURATION_SEC")
+    min_distance_from_event = 20  # секунд, за сколько минимум до концевика должна заканчиваться остановка
 
     stop_count = 0
     start_idx = None
@@ -259,7 +263,8 @@ def find_first_stable_stop(tracks, start_index, current_dt, settings):
 
     j = start_index
     while j >= 0:
-        point_time = datetime.datetime.strptime(tracks[j].get("gt"), "%Y-%m-%d %H:%M:%S")
+        point_time = datetime.datetime.strptime(tracks[j].get("gt"),
+                                                "%Y-%m-%d %H:%M:%S")
         if point_time < cutoff_time:
             break
 
@@ -288,8 +293,6 @@ def find_first_stable_stop(tracks, start_index, current_dt, settings):
             return tracks[start_idx].get("gt")
 
     return None
-
-
 
 
 def extract_before_after_segments(tracks, first_switch_index,
