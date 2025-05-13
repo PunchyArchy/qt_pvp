@@ -144,7 +144,6 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
             # === Новый улучшенный блок поиска time_before ===
             time_before = find_first_stable_stop(
                 tracks, i, current_dt, settings)
-            logger.debug(f"Triggered. Time_before - {time_before}")
 
             lifting_end_idx = i
             last_switch_index = i
@@ -208,7 +207,6 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
                     stop_count = 0
                     move_count = 0
                 k += 1
-
             if not time_after:
                 last_switch_time = datetime.datetime.strptime(
                     tracks[last_switch_index]['gt'], "%Y-%m-%d %H:%M:%S")
@@ -221,7 +219,6 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
                 else:
                     i = lifting_end_idx + 1
                     continue
-
             last_alarm_dt = datetime.datetime.strptime(
                 tracks[last_switch_index].get("gt"), "%Y-%m-%d %H:%M:%S")
             time_30_after_dt = last_alarm_dt + datetime.timedelta(
@@ -262,7 +259,6 @@ def find_first_stable_stop(tracks, start_index, current_dt, settings):
     j_end_time = None
 
     j = start_index
-    tracks_sorted = sorted(tracks, key=lambda x: x['gt'])
     while j >= 0:
         point_time = datetime.datetime.strptime(tracks[j].get("gt"),
                                                 "%Y-%m-%d %H:%M:%S")
