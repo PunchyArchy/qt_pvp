@@ -285,7 +285,7 @@ def find_first_stable_stop(tracks, start_index, current_dt, settings):
             stop_start_idx = j
         else:
             if stop_count >= min_stop_duration and stop_end_idx is not None:
-                end_time = datetime.datetime.strptime(track['gt'], "%Y-%m-%d %H:%M:%S")     # end_time - это время первого трека во время остановки
+                end_time = datetime.datetime.strptime(tracks[j-1]['gt'], "%Y-%m-%d %H:%M:%S")     # end_time - это время первого трека во время остановки
                 delta_sec = (current_dt - end_time).total_seconds()
                 logger.debug(
                     f"[КАНДИДАТ] остановка длиной {stop_count} сек, конец={end_time}, событие={current_dt}, разница={delta_sec} сек"

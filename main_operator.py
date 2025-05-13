@@ -140,15 +140,15 @@ class Main:
                     jsession=self.jsession, reg_id=reg_id,
                     year=interest["year"], month=interest["month"],
                     day=interest["day"],
-                    start_sec=interest["photo_before_sec"] - 3,
-                    end_sec=interest["photo_before_sec"] + 2)
+                    start_sec=interest["photo_before_sec"],
+                    end_sec=interest["photo_before_sec"] + 4)
                 logger.debug(f"Кадры до: {frames_before}")
                 frames_after = await cms_api.get_frames(
                     jsession=self.jsession, reg_id=reg_id,
                     year=interest["year"], month=interest["month"],
                     day=interest["day"],
-                    start_sec=interest["photo_after_sec"] - 3,
-                    end_sec=interest["photo_after_sec"] + 2)
+                    start_sec=interest["photo_after_sec"],
+                    end_sec=interest["photo_after_sec"] + 4)
                 logger.debug(f"Фото до - {frames_before}. "
                              f"Фото после - {frames_after}")
                 # Проводим анализ качества фото
