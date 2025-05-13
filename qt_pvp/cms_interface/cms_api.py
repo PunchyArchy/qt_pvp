@@ -455,11 +455,6 @@ def get_dev_idno_by_plate(jsession: str, plate_number: str,
 # for interest in interests:
 #    get_interest_download_path(jsession, interest)
 
-log_data = login()
-res = send_cmsv6_message("018270348452", log_data.json()["jsession"], "123")
-print(res)
-ms = get_dev_idno_by_plate(log_data.json()["jsession"], "K630AX702")
-print(ms)
 
 # print(log_data)
 # if res["result"] == 32:

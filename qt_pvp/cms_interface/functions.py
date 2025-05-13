@@ -134,7 +134,7 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
         # Если найдено срабатывание концевика
         i += 1
         if bits[22] == '1' or bits[23] == '1':
-            logger.debug(f"Triggered. Bits-22:{bits[22]}, bits-23:{bits[23]}")
+            logger.debug(f"Triggered - {timestamp}. {'Лодка' if int(bits[22]) else 'Контейнер'}")
             switch_events = []
             current_dt = datetime.datetime.strptime(timestamp,
                                                     "%Y-%m-%d %H:%M:%S")

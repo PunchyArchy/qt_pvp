@@ -320,8 +320,8 @@ if __name__ == "__main__":
     d = Main()
     loop = asyncio.get_event_loop()
     loop.run_until_complete(d.mainloop())
-    #reg_id = "K630AX702"
-    #d.download_reg_videos(
+    # reg_id = "K630AX702"
+    # d.download_reg_videos(
     #    "2024050601",
     #    chanel_id=0,
     #    start_time="2025-05-08 16:35:00",
