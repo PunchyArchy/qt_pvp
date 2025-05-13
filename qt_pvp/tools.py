@@ -9,7 +9,7 @@ if __name__ == "__main__":
     reg_id = "018270348452"
     #time_start = "2025-05-11 08:13:10"
     #time_end = "2025-05-11 18:13:20"
-    time_start = "2025-05-13 14:38:00"
-    time_end = "2025-05-13 14:39:00"
+    time_start = "2025-05-13 07:38:00"
+    time_end = "2025-05-13 08:39:00"
     interests = get_interests(reg_id, time_start, time_end)
-    #print(interests)
+    print(interests)
