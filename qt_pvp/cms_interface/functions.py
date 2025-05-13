@@ -258,11 +258,12 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
 
 
 def find_first_stable_stop(tracks, start_index, current_dt, settings):
+    logger.debug("Анализ трека")
     cutoff_time = current_dt - datetime.timedelta(
         seconds=settings.config.getint("Interests", "MAX_LOOKBACK_SECONDS"))
     min_stop_speed = settings.config.getint("Interests", "MIN_STOP_SPEED")
     min_stop_duration = settings.config.getint("Interests", "MIN_STOP_DURATION_SEC")
-    min_distance_from_event = 20  # секунд
+    min_distance_from_event = 20  # секунд до концевика
 
     stop_start_idx = None
     stop_end_idx = None
@@ -274,49 +275,56 @@ def find_first_stable_stop(tracks, start_index, current_dt, settings):
         point_time = datetime.datetime.strptime(track.get("gt"), "%Y-%m-%d %H:%M:%S")
         spd = track.get("sp") or 0
 
-        logger.debug(f"[SCAN] j={j}, time={point_time}, spd={spd}, stop_count={stop_count}")
+        logger.debug(f"[СКАНИРОВАНИЕ] j={j}, время={point_time}, скорость={spd}, текущая_длина_остановки={stop_count}")
 
         if int(spd) <= min_stop_speed:
             stop_count += 1
-            logger.debug(f"[STOP] spd={spd} <= {min_stop_speed}, count={stop_count}")
+            logger.debug(f"[ОСТАНОВКА] скорость={spd} <= {min_stop_speed}, длина серии={stop_count}")
             if stop_end_idx is None:
                 stop_end_idx = j
             stop_start_idx = j
         else:
             if stop_count >= min_stop_duration and stop_end_idx is not None:
-                end_time = datetime.datetime.strptime(tracks[stop_end_idx]['gt'], "%Y-%m-%d %H:%M:%S")
+                end_time = datetime.datetime.strptime(track['gt'], "%Y-%m-%d %H:%M:%S")     # end_time - это время первого трека во время остановки
                 delta_sec = (current_dt - end_time).total_seconds()
-                logger.debug(f"[CANDIDATE] Found stop of duration {stop_count} secs, "
-                             f"end_time={end_time}, event_time={current_dt}, delta={delta_sec}s")
+                logger.debug(
+                    f"[КАНДИДАТ] остановка длиной {stop_count} сек, конец={end_time}, событие={current_dt}, разница={delta_sec} сек"
+                )
                 if delta_sec >= min_distance_from_event:
-                    logger.debug(f"[STABLE STOP FOUND] from {tracks[stop_start_idx]['gt']} to {tracks[stop_end_idx]['gt']}")
+                    logger.debug(
+                        f"[ОСТАНОВКА ПОДТВЕРЖДЕНА] c {tracks[stop_start_idx]['gt']} по {tracks[stop_end_idx]['gt']}")
                     return tracks[stop_start_idx].get("gt")
                 else:
-                    logger.debug(f"[REJECTED] Too close to event: {delta_sec}s < {min_distance_from_event}s")
+                    logger.debug(
+                        f"[ОТКЛОНЕНО] слишком близко к событию: {delta_sec} сек < {min_distance_from_event} сек"
+                    )
 
             stop_start_idx = None
             stop_end_idx = None
             stop_count = 0
 
-        # сдвигаемся в прошлое
         j -= 1
 
-    # Проверка последней серии (в конце ленты)
+    # Проверка последней серии, если цикл закончился
     if stop_count >= min_stop_duration and stop_end_idx is not None:
         end_time = datetime.datetime.strptime(tracks[stop_end_idx]['gt'], "%Y-%m-%d %H:%M:%S")
-        delta_sec = (current_dt - end_time).total_seconds()
-
-        logger.debug(f"[LAST CHECK] Final candidate with delta={delta_sec}s, "
-                     f"from={tracks[stop_start_idx]['gt']} to={tracks[stop_end_idx]['gt']}")
-
+        delta_sec = (end_time - current_dt).total_seconds()
+        logger.debug(
+            f"[ФИНАЛЬНАЯ ПРОВЕРКА] Последняя серия: разница={delta_sec} сек, "
+            f"с {tracks[stop_start_idx]['gt']} по {tracks[stop_end_idx]['gt']}"
+        )
         if delta_sec >= min_distance_from_event:
-            logger.debug(f"[STABLE STOP FOUND AT END] from {tracks[stop_start_idx]['gt']} to {tracks[stop_end_idx]['gt']}")
+            logger.debug(
+                f"[ФИНАЛЬНАЯ ОСТАНОВКА ПРИНЯТА] с {tracks[stop_start_idx]['gt']} по {tracks[stop_end_idx]['gt']}")
             return tracks[stop_start_idx].get("gt")
         else:
-            logger.debug(f"[LAST CANDIDATE REJECTED] Too close to event: {delta_sec}s < {min_distance_from_event}s")
+            logger.debug(
+                f"[ФИНАЛЬНАЯ ОСТАНОВКА ОТКЛОНЕНА] слишком близко: {delta_sec} сек < {min_distance_from_event} сек"
+            )
 
-    logger.warning("[NO STABLE STOP FOUND]")
+    logger.warning("[ОСТАНОВКА НЕ НАЙДЕНА]")
     return None
+
 
 
 

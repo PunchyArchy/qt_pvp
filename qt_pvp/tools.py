@@ -12,4 +12,5 @@ if __name__ == "__main__":
     time_start = "2025-05-13 07:38:00"
     time_end = "2025-05-13 08:39:00"
     interests = get_interests(reg_id, time_start, time_end)
-    print(interests)
+    for int in interests:
+        print(int)
