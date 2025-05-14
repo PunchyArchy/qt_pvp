@@ -122,19 +122,20 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
         track = tracks[i]
         s1 = track.get("s1")
         timestamp = track.get("gt")
-
-        try:
-            s1_int = int(s1)
-        except (ValueError, TypeError):
-            i += 1
-            continue
+        s1_int = int(s1)
+        # try:
+        #    s1_int = int(s1)
+        # except (ValueError, TypeError):
+        #    i += 1
+        #    continue
 
         bits = list(bin(s1_int & 0xFFFFFFFF)[2:].zfill(32))
         bits.reverse()
         # Если найдено срабатывание концевика
         i += 1
         if bits[22] == '1' or bits[23] == '1':
-            logger.debug(f"Triggered - {timestamp}. {'Лодка' if int(bits[22]) else 'Контейнер'}")
+            logger.debug(
+                f"Triggered - {timestamp}. {'Лодка' if int(bits[22]) else 'Контейнер'}")
             switch_events = []
             current_dt = datetime.datetime.strptime(timestamp,
                                                     "%Y-%m-%d %H:%M:%S")
@@ -144,18 +145,6 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
             # === Новый улучшенный блок поиска time_before ===
             time_before = find_first_stable_stop(
                 tracks, i, current_dt, settings)
-            logger.debug(f"[ANALYSIS] Timestamp (switch): {timestamp}")
-            logger.debug(
-                f"[ANALYSIS] 30 sec before: {time_30_before_dt.strftime('%Y-%m-%d %H:%M:%S')}")
-            logger.debug(
-                f"[ANALYSIS] time_before (photo_before_timestamp): {time_before}")
-            if time_before:
-                tb_dt = datetime.datetime.strptime(time_before,
-                                                   "%Y-%m-%d %H:%M:%S")
-                logger.debug(
-                    f"[ANALYSIS] time_before > switch timestamp? {tb_dt > datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')}")
-                logger.debug(
-                    f"[ANALYSIS] time_before > start_time (30 sec before)? {tb_dt > time_30_before_dt}")
             lifting_end_idx = i
             last_switch_index = i
 
@@ -262,7 +251,61 @@ def find_first_stable_stop(tracks, start_index, current_dt, settings):
     cutoff_time = current_dt - datetime.timedelta(
         seconds=settings.config.getint("Interests", "MAX_LOOKBACK_SECONDS"))
     min_stop_speed = settings.config.getint("Interests", "MIN_STOP_SPEED")
-    min_stop_duration = settings.config.getint("Interests", "MIN_STOP_DURATION_SEC")
+    min_stop_duration = settings.config.getint("Interests",
+                                               "MIN_STOP_DURATION_SEC")
+
+    stop_start_idx = None
+    stop_count = 0
+
+    j = start_index
+    while j >= 0:
+        track = tracks[j]
+        point_time = datetime.datetime.strptime(track.get("gt"),
+                                                "%Y-%m-%d %H:%M:%S")
+        spd = track.get("sp") or 0
+
+        logger.debug(
+            f"[СКАНИРОВАНИЕ] j={j}, время={point_time}, скорость={spd}, текущая_длина_остановки={stop_count}")
+
+        if point_time < cutoff_time:
+            logger.debug(
+                f"[ОБРЫВ] Точка {point_time} за пределами окна {cutoff_time}")
+            break
+
+        if int(spd) <= min_stop_speed:
+            stop_count += 1
+            logger.debug(
+                f"[ОСТАНОВКА] скорость={spd} <= {min_stop_speed}, длина серии={stop_count}")
+            stop_start_idx = j
+        else:
+            if stop_count >= min_stop_duration and stop_start_idx is not None:
+                logger.debug(
+                    f"[НАЙДЕНО] Остановка длиной {stop_count} сек, началась в {tracks[stop_start_idx]['gt']}")
+                return tracks[stop_start_idx].get("gt")
+
+            # сброс серии
+            stop_start_idx = None
+            stop_count = 0
+
+        j -= 1
+
+    # Если цикл закончился, но серия осталась — тоже возвращаем
+    if stop_count >= min_stop_duration and stop_start_idx is not None:
+        logger.debug(
+            f"[НАЙДЕНО В КОНЦЕ] Остановка длиной {stop_count} сек, началась в {tracks[stop_start_idx]['gt']}")
+        return tracks[stop_start_idx].get("gt")
+
+    logger.warning("[ОСТАНОВКА НЕ НАЙДЕНА]")
+    return None
+
+
+def find_first_stable_stop_depr(tracks, start_index, current_dt, settings):
+    logger.debug("Анализ трека")
+    cutoff_time = current_dt - datetime.timedelta(
+        seconds=settings.config.getint("Interests", "MAX_LOOKBACK_SECONDS"))
+    min_stop_speed = settings.config.getint("Interests", "MIN_STOP_SPEED")
+    min_stop_duration = settings.config.getint("Interests",
+                                               "MIN_STOP_DURATION_SEC")
     min_distance_from_event = 20  # секунд до концевика
 
     stop_start_idx = None
@@ -272,20 +315,24 @@ def find_first_stable_stop(tracks, start_index, current_dt, settings):
     j = start_index
     while j >= 0:
         track = tracks[j]
-        point_time = datetime.datetime.strptime(track.get("gt"), "%Y-%m-%d %H:%M:%S")
+        point_time = datetime.datetime.strptime(track.get("gt"),
+                                                "%Y-%m-%d %H:%M:%S")
         spd = track.get("sp") or 0
 
-        logger.debug(f"[СКАНИРОВАНИЕ] j={j}, время={point_time}, скорость={spd}, текущая_длина_остановки={stop_count}")
+        logger.debug(
+            f"[СКАНИРОВАНИЕ] j={j}, время={point_time}, скорость={spd}, текущая_длина_остановки={stop_count}")
 
         if int(spd) <= min_stop_speed:
             stop_count += 1
-            logger.debug(f"[ОСТАНОВКА] скорость={spd} <= {min_stop_speed}, длина серии={stop_count}")
+            logger.debug(
+                f"[ОСТАНОВКА] скорость={spd} <= {min_stop_speed}, длина серии={stop_count}")
             if stop_end_idx is None:
                 stop_end_idx = j
             stop_start_idx = j
         else:
             if stop_count >= min_stop_duration and stop_end_idx is not None:
-                end_time = datetime.datetime.strptime(tracks[j-1]['gt'], "%Y-%m-%d %H:%M:%S")     # end_time - это время первого трека во время остановки
+                end_time = datetime.datetime.strptime(track['gt'],
+                                                      "%Y-%m-%d %H:%M:%S")  # end_time - это время первого трека во время остановки
                 delta_sec = (current_dt - end_time).total_seconds()
                 logger.debug(
                     f"[КАНДИДАТ] остановка длиной {stop_count} сек, конец={end_time}, событие={current_dt}, разница={delta_sec} сек"
@@ -306,9 +353,12 @@ def find_first_stable_stop(tracks, start_index, current_dt, settings):
         j -= 1
 
     # Проверка последней серии, если цикл закончился
+    logger.debug(
+        f"Цикл закончился. Stop_start_idx - {stop_start_idx}, stop_end_idx - {stop_end_idx}")
     if stop_count >= min_stop_duration and stop_end_idx is not None:
-        end_time = datetime.datetime.strptime(tracks[stop_end_idx]['gt'], "%Y-%m-%d %H:%M:%S")
-        delta_sec = (end_time - current_dt).total_seconds()
+        end_time = datetime.datetime.strptime(tracks[stop_start_idx]['gt'],
+                                              "%Y-%m-%d %H:%M:%S")
+        delta_sec = (current_dt - end_time).total_seconds()
         logger.debug(
             f"[ФИНАЛЬНАЯ ПРОВЕРКА] Последняя серия: разница={delta_sec} сек, "
             f"с {tracks[stop_start_idx]['gt']} по {tracks[stop_end_idx]['gt']}"
@@ -324,8 +374,6 @@ def find_first_stable_stop(tracks, start_index, current_dt, settings):
 
     logger.warning("[ОСТАНОВКА НЕ НАЙДЕНА]")
     return None
-
-
 
 
 def extract_before_after_segments(tracks, first_switch_index,
