@@ -142,6 +142,10 @@ def find_by_lifting_switches(tracks, sec_before=30, sec_after=30):
             time_30_before_dt = current_dt - datetime.timedelta(
                 seconds=sec_before)
 
+            if i >= len(tracks):
+                logger.warning(
+                    f"[find_by_lifting_switches] Индекс i={i} выходит за границы tracks (длина = {len(tracks)}). Прерываем цикл.")
+                break
             # === Новый улучшенный блок поиска time_before ===
             time_before = find_first_stable_stop(
                 tracks, i, current_dt, settings)

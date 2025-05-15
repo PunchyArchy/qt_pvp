@@ -234,7 +234,7 @@ async def download_interest_videos(jsession, interest, chanel_id, reg_id,
 async def get_frames(jsession, reg_id: str,
                      year: int, month: int, day: int,
                      start_sec: int, end_sec: int):
-    channels = [0, 1, 2, 3, 4]
+    channels = [0, 1, 2, 3]
     frames = []
     for channel_id in channels:
         try:
